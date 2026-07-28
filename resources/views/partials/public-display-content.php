@@ -85,24 +85,20 @@ $pageData = $pageData ?? include __DIR__ . '/../data/public-display-data.php';
                 <div class="serving-col">
                     <div class="serving-col-header ipd-header">IPD</div>
                     <div class="serving-col-body">
-                        <?php foreach ($pageData['serving']['items'] as $item): ?>
-                            <?php if ($item['patient_type'] === 'IPD'): ?>
-                                <div class="serving-col-row">
-                                    <span class="serving-code proc-<?= substr($item['code'], 0, 2) ?>"><?= htmlspecialchars($item['code'], ENT_QUOTES, 'UTF-8') ?></span>
-                                </div>
-                            <?php endif; ?>
+                        <?php foreach (($pageData['serving']['ipd'] ?? []) as $item): ?>
+                            <div class="serving-col-row">
+                                <span class="serving-code proc-<?= htmlspecialchars($item['codeClass'] ?? '', ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($item['id'] ?? '', ENT_QUOTES, 'UTF-8') ?></span>
+                            </div>
                         <?php endforeach; ?>
                     </div>
                 </div>
                 <div class="serving-col">
                     <div class="serving-col-header opd-header">OPD</div>
                     <div class="serving-col-body">
-                        <?php foreach ($pageData['serving']['items'] as $item): ?>
-                            <?php if ($item['patient_type'] === 'OPD'): ?>
-                                <div class="serving-col-row">
-                                    <span class="serving-code proc-<?= substr($item['code'], 0, 2) ?>"><?= htmlspecialchars($item['code'], ENT_QUOTES, 'UTF-8') ?></span>
-                                </div>
-                            <?php endif; ?>
+                        <?php foreach (($pageData['serving']['opd'] ?? []) as $item): ?>
+                            <div class="serving-col-row">
+                                <span class="serving-code proc-<?= htmlspecialchars($item['codeClass'] ?? '', ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($item['id'] ?? '', ENT_QUOTES, 'UTF-8') ?></span>
+                            </div>
                         <?php endforeach; ?>
                     </div>
                 </div>
@@ -158,11 +154,11 @@ $pageData = $pageData ?? include __DIR__ . '/../data/public-display-data.php';
         }
 
         function getServingOrder(item, history) {
-            const historyItem = history.find((ticket) => ticket.id === item.ticket.id);
+            const historyItem = history.find((ticket) => ticket.id === item.id);
             if (historyItem?.calledOrder) return Number(historyItem.calledOrder);
-            if (item.ticket.calledOrder) return Number(item.ticket.calledOrder);
-            if (item.ticket.calledAt) return new Date(item.ticket.calledAt).getTime();
-            return getTicketNumberValue(item.ticket);
+            if (item.calledOrder) return Number(item.calledOrder);
+            if (item.calledAt) return new Date(item.calledAt).getTime();
+            return getTicketNumberValue(item);
         }
 
         function renderServing(serving, history = []) {
@@ -171,9 +167,11 @@ $pageData = $pageData ?? include __DIR__ . '/../data/public-display-data.php';
             if (!ipdBody || !opdBody || !serving) return;
 
             const items = Object.entries(procedures)
-                .map(([key, procedure]) => ({ ticket: serving[key], procedure }))
-                .filter((item) => item.ticket)
-                .sort((a, b) => getServingOrder(a, history) - getServingOrder(b, history));
+                .flatMap(([key, procedure]) => {
+                    const tickets = Array.isArray(serving[key]) ? serving[key] : [];
+                    return tickets.filter(Boolean).map((ticket) => ({ ticket, procedure }));
+                })
+                .sort((a, b) => getServingOrder(a.ticket, history) - getServingOrder(b.ticket, history));
 
             const buildRows = (patientType) => {
                 const rows = items
@@ -210,15 +208,20 @@ $pageData = $pageData ?? include __DIR__ . '/../data/public-display-data.php';
 
         function announceServingChanges(serving) {
             Object.entries(procedures).forEach(([key, procedure]) => {
-                const ticket = serving[key];
-                const currentId = ticket?.id || '';
-                const previousId = lastServingIds[key] || '';
+                const tickets = Array.isArray(serving?.[key]) ? serving[key].filter(Boolean) : [];
+                const currentIds = tickets.map((ticket) => ticket.id).join('|');
+                const previousIds = lastServingIds[key] || '';
 
-                if (currentId && currentId !== previousId) {
-                    speakAnnouncement(ticket, procedure);
+                if (currentIds && currentIds !== previousIds) {
+                    const previousSet = new Set(previousIds ? previousIds.split('|') : []);
+                    tickets.forEach((ticket) => {
+                        if (!previousSet.has(ticket.id)) {
+                            speakAnnouncement(ticket, procedure);
+                        }
+                    });
                 }
 
-                lastServingIds[key] = currentId;
+                lastServingIds[key] = currentIds;
             });
         }
 

@@ -1525,6 +1525,20 @@ a {
 .rqs-serving-hero.proc-ctscan .num { color: #2f7ed8; }
 .rqs-serving-hero .none { color: var(--muted); font-size: 13px; padding: 8px 0; }
 
+.rqs-serving-slot {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.rqs-slot-label {
+    color: #59645e;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
 /* Per-procedure serving hero background colors */
 .rqs-serving-hero.proc-ultrasound {
     border-color: rgba(240,100,47,0.25);
@@ -1538,7 +1552,17 @@ a {
 }
 .rqs-serving-hero.proc-ctscan .label { color: #2f7ed8; }
 
-.rqs-action-row { display: flex; gap: 8px; }
+.rqs-action-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.rqs-action-row .primary-action,
+.rqs-action-row .secondary-action {
+    width: 100%;
+    justify-content: center;
+}
 .rqs-btn { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; border: 1px solid transparent; }
 .rqs-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .rqs-btn-ghost { background: transparent; color: var(--muted); border-color: var(--line); }

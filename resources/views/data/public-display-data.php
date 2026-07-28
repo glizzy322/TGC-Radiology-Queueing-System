@@ -17,10 +17,12 @@ return [
     ],
     'serving' => [
         'title' => 'Now Serving',
-        'items' => [
-            ['exam' => 'X-RAY', 'code' => 'XR004', 'patient_type' => 'IPD'],
-            ['exam' => 'Ultrasound', 'code' => 'UT002', 'patient_type' => 'IPD'],
-            ['exam' => 'CT-Scan', 'code' => 'CT001', 'patient_type' => 'OPD'],
+        'ipd' => [
+            ['id' => 'XR004', 'codeClass' => 'XR'],
+            ['id' => 'UT002', 'codeClass' => 'UT'],
+        ],
+        'opd' => [
+            ['id' => 'CT001', 'codeClass' => 'CT'],
         ],
     ],
     'queues' => [

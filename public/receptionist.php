@@ -217,9 +217,9 @@
 
     <script>
         const procedures = {
-            xray: { name: 'X-Ray', shortName: 'X-RAY', chartLabel: 'Xray', prefix: 'XR' },
-            ultrasound: { name: 'Ultrasound', shortName: 'UTZ', chartLabel: 'Utz', prefix: 'UT' },
-            ctscan: { name: 'CT Scan', shortName: 'CTS', chartLabel: 'CTS', prefix: 'CT' }
+            xray: { name: 'X-Ray', shortName: 'X-RAY', chartLabel: 'Xray', prefix: 'XR', maxServing: 1 },
+            ultrasound: { name: 'Ultrasound', shortName: 'UTZ', chartLabel: 'Utz', prefix: 'UT', maxServing: 2 },
+            ctscan: { name: 'CT Scan', shortName: 'CTS', chartLabel: 'CTS', prefix: 'CT', maxServing: 1 }
         };
 
         const state = {
@@ -234,9 +234,9 @@
                 ctscan: []
             },
             serving: {
-                xray: null,
-                ultrasound: null,
-                ctscan: null
+                xray: [null],
+                ultrasound: [null, null],
+                ctscan: [null]
             },
             counters: {
                 xray: 0,
@@ -249,6 +249,7 @@
         const STORAGE_KEY = 'radiologyQueueState';
 
         function parseTicketDates(ticket) {
+            if (!ticket) return null;
             return {
                 ...ticket,
                 createdAt: ticket.createdAt ? new Date(ticket.createdAt) : new Date(),
@@ -258,36 +259,59 @@
             };
         }
 
+        function normalizeServingSlots(key, tickets = []) {
+            const maxSlots = procedures[key].maxServing || 1;
+            const slots = Array(maxSlots).fill(null);
+            tickets.slice(0, maxSlots).forEach((ticket, index) => {
+                slots[index] = parseTicketDates(ticket);
+            });
+            return slots;
+        }
+
+        function getServingCount(key) {
+            return state.serving[key].filter(Boolean).length;
+        }
+
         function getTicketNumberValue(ticket) {
             const match = String(ticket?.id || '').match(/\d+/);
             return match ? Number(match[0]) : Number.MAX_SAFE_INTEGER;
         }
 
         function migrateServingCallOrder() {
+            const allServingTickets = Object.values(state.serving).flat().filter(Boolean);
             state.callSequence = Math.max(
                 Number(state.callSequence || 0),
-                ...Object.values(state.serving).filter(Boolean).map((ticket) => Number(ticket.calledOrder || 0)),
+                ...allServingTickets.map((ticket) => Number(ticket.calledOrder || 0)),
                 ...state.calledTickets.map((ticket) => Number(ticket.calledOrder || 0))
             );
 
-            Object.entries(state.serving)
-                .filter(([, ticket]) => ticket && !ticket.calledOrder)
+            // Collect all serving tickets that need calledOrder, with their keys
+            const needsOrder = [];
+            Object.entries(state.serving).forEach(([key, tickets]) => {
+                tickets.forEach((ticket, idx) => {
+                    if (ticket && !ticket.calledOrder) {
+                        needsOrder.push({ key, idx, ticket });
+                    }
+                });
+            });
+
+            needsOrder
                 .sort((a, b) => {
-                    const aTime = a[1].calledAt ? a[1].calledAt.getTime() : 0;
-                    const bTime = b[1].calledAt ? b[1].calledAt.getTime() : 0;
+                    const aTime = a.ticket.calledAt ? a.ticket.calledAt.getTime() : 0;
+                    const bTime = b.ticket.calledAt ? b.ticket.calledAt.getTime() : 0;
                     if (aTime && bTime && aTime !== bTime) return aTime - bTime;
-                    return getTicketNumberValue(a[1]) - getTicketNumberValue(b[1]);
+                    return getTicketNumberValue(a.ticket) - getTicketNumberValue(b.ticket);
                 })
-                .forEach(([key]) => {
+                .forEach((item) => {
                     state.callSequence += 1;
-                    state.serving[key].calledOrder = state.callSequence;
-                    if (!state.serving[key].calledAt) {
-                        state.serving[key].calledAt = new Date();
+                    item.ticket.calledOrder = state.callSequence;
+                    if (!item.ticket.calledAt) {
+                        item.ticket.calledAt = new Date();
                     }
                     state.calledTickets.push({
-                        id: state.serving[key].id,
-                        procedureKey: key,
-                        calledOrder: state.serving[key].calledOrder
+                        id: item.ticket.id,
+                        procedureKey: item.key,
+                        calledOrder: item.ticket.calledOrder
                     });
                 });
         }
@@ -307,7 +331,16 @@
                     state.queues[key] = Array.isArray(saved.queues?.[key])
                         ? saved.queues[key].map(parseTicketDates)
                         : [];
-                    state.serving[key] = saved.serving?.[key] ? parseTicketDates(saved.serving[key]) : null;
+                    // Migrate: old format was a single object, new format is an array
+                    const savedServing = saved.serving?.[key];
+                    if (Array.isArray(savedServing)) {
+                        state.serving[key] = normalizeServingSlots(key, savedServing);
+                    } else if (savedServing) {
+                        // Migrate single-object to array
+                        state.serving[key] = normalizeServingSlots(key, [savedServing]);
+                    } else {
+                        state.serving[key] = normalizeServingSlots(key);
+                    }
                     state.counters[key] = Number(saved.counters?.[key] || 0);
                 });
                 migrateServingCallOrder();
@@ -393,29 +426,36 @@
                 : 'Select a procedure and patient category to continue.';
         }
 
-        function callNext(key) {
-            if (state.serving[key] || state.queues[key].length === 0) return;
+        function callNext(key, slotIndex = null) {
+            const maxSlots = procedures[key].maxServing || 1;
+            const targetSlot = slotIndex === null
+                ? state.serving[key].findIndex((ticket) => !ticket)
+                : Number(slotIndex);
+            if (targetSlot < 0 || targetSlot >= maxSlots || state.serving[key][targetSlot] || state.queues[key].length === 0) return;
             state.callSequence += 1;
-            state.serving[key] = {
+            const calledTicket = {
                 ...state.queues[key].shift(),
                 calledAt: new Date(),
                 calledOrder: state.callSequence
             };
+            state.serving[key][targetSlot] = calledTicket;
             state.calledTickets.push({
-                id: state.serving[key].id,
+                id: calledTicket.id,
                 procedureKey: key,
-                calledOrder: state.serving[key].calledOrder
+                calledOrder: calledTicket.calledOrder
             });
             render();
         }
 
-        function completePatient(key) {
-            if (!state.serving[key]) return;
+        function completePatient(key, slotIndex) {
+            const targetSlot = Number(slotIndex);
+            const ticket = state.serving[key][targetSlot];
+            if (!ticket) return;
+            state.serving[key][targetSlot] = null;
             state.completed.push({
-                ...state.serving[key],
+                ...ticket,
                 completedAt: new Date()
             });
-            state.serving[key] = null;
             render();
         }
 
@@ -462,36 +502,43 @@
         function renderManageQueue() {
             const manageGrid = document.getElementById('manageGrid');
             manageGrid.innerHTML = Object.entries(procedures).map(([key, procedure]) => {
-                const serving = state.serving[key];
+                const servingList = state.serving[key];
                 const waiting = state.queues[key];
+                const maxSlots = procedure.maxServing || 1;
+                const servingSlots = Array.from({ length: maxSlots }, (_, index) => servingList[index] || null);
+                const servingCount = servingSlots.filter(Boolean).length;
+
+                const servingHtml = servingSlots.map((ticket, slotIndex) => `
+                    <div class="rqs-serving-slot">
+                        ${maxSlots > 1 ? `<div class="rqs-slot-label">Slot ${slotIndex + 1}</div>` : ''}
+                        <div class="rqs-serving-hero proc-${key}">
+                            ${ticket ? `
+                                <div class="label">Now serving</div>
+                                <div class="num rqs-num">${ticket.id}</div>
+                                <span class="category-badge">${ticket.patientType}</span>
+                            ` : `
+                                <div class="none">No patient being served</div>
+                            `}
+                        </div>
+                        <div class="rqs-action-row">
+                            <button class="secondary-action" type="button" ${ticket ? '' : 'disabled'} onclick="completePatient('${key}', ${slotIndex})">
+                                <span class="check-icon"></span> Complete
+                            </button>
+                            <button class="primary-action small" type="button" ${ticket || waiting.length === 0 ? 'disabled' : ''} onclick="callNext('${key}', ${slotIndex})">
+                                <span class="call-icon"></span> Call next
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
 
                 return `
                     <section class="panel rqs-exam-col manage-card" style="padding: 18px;">
                         <div class="rqs-exam-header">
                             <h3>${procedure.name}</h3>
-                            <span class="rqs-count-chip">${waiting.length} waiting</span>
+                            <span class="rqs-count-chip">${waiting.length} waiting${maxSlots > 1 ? ` · ${servingCount}/${maxSlots} slots` : ''}</span>
                         </div>
 
-                        ${serving ? `
-                            <div class="rqs-serving-hero proc-${key}">
-                                <div class="label">Now serving</div>
-                                <div class="num rqs-num">${serving.id}</div>
-                                <span class="category-badge">${serving.patientType}</span>
-                            </div>
-                        ` : `
-                            <div class="rqs-serving-hero proc-${key}">
-                                <div class="none">No patient being served</div>
-                            </div>
-                        `}
-
-                        <div class="rqs-action-row">
-                            <button class="secondary-action" type="button" style="flex: 1; justify-content: center;" ${serving ? '' : 'disabled'} onclick="completePatient('${key}')">
-                                <span class="check-icon"></span> Complete
-                            </button>
-                            <button class="primary-action small" type="button" style="flex: 1; justify-content: center;" ${serving || waiting.length === 0 ? 'disabled' : ''} onclick="callNext('${key}')">
-                                <span class="call-icon"></span> Call next
-                            </button>
-                        </div>
+                        ${servingHtml}
 
                         <div>
                             <p class="rqs-group-label" style="margin-bottom: 8px; font-size: 12px; font-weight: 800; color: #59645e; text-transform: uppercase;">Waiting list</p>
@@ -628,12 +675,14 @@
             if (!simple) return;
 
             simple.innerHTML = Object.entries(procedures).map(([key, procedure]) => {
-                const serving = state.serving[key];
-                const id = serving ? serving.id : '-';
+                const servingList = state.serving[key].filter(Boolean);
+                const ids = servingList.length > 0
+                    ? servingList.map(t => t.id).join(', ')
+                    : '-';
                 return `
                     <li class="monitor-simple-row">
                         <span class="proc-name proc-${key}">${procedure.shortName}</span>
-                        <span class="proc-id proc-${key}">${id}</span>
+                        <span class="proc-id proc-${key}">${ids}</span>
                     </li>
                 `;
             }).join('');
@@ -785,7 +834,7 @@
             });
 
             // Mark currently serving
-            Object.values(state.serving).filter(Boolean).forEach(t => {
+            Object.values(state.serving).flat().filter(Boolean).forEach(t => {
                 if (allMap.has(t.id)) {
                     allMap.get(t.id).status = 'Serving';
                 }
