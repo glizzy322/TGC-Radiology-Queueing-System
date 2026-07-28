@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reception | Radiology QMS</title>
     <link rel="stylesheet" href="/css/receptionist.css">
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
     <div class="rqs-shell">
@@ -47,6 +48,12 @@
                 <div class="analytics-dashboard">
                     <div class="analytics-toolbar">
                         <label class="filter-control">
+                            <span>Year</span>
+                            <select id="yearFilter">
+                                <option value="all">All years</option>
+                            </select>
+                        </label>
+                        <label class="filter-control">
                             <span>Month</span>
                             <select id="monthFilter">
                                 <option value="all">All months</option>
@@ -73,6 +80,10 @@
                                 <option value="ctscan">CT Scan</option>
                             </select>
                         </label>
+                        <button class="export-btn" id="downloadExcelBtn" type="button" title="Download Summary Report as Excel">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                            Download Excel Report
+                        </button>
                     </div>
 
                     <div class="analytics-layout">
@@ -504,10 +515,11 @@
         }
 
         function renderDashboard() {
+            const yearValue = document.getElementById('yearFilter').value;
             const monthValue = document.getElementById('monthFilter').value;
             const categoryValue = document.getElementById('categoryFilter').value;
-            const filteredGeneratedTickets = filterAnalyticsTickets(state.generatedTickets, monthValue, categoryValue, 'createdAt');
-            const filteredCompletedTickets = filterAnalyticsTickets(state.completed, monthValue, categoryValue, 'completedAt');
+            const filteredGeneratedTickets = filterAnalyticsTickets(state.generatedTickets, yearValue, monthValue, categoryValue, 'createdAt');
+            const filteredCompletedTickets = filterAnalyticsTickets(state.completed, yearValue, monthValue, categoryValue, 'completedAt');
             const generatedCounts = getProcedureCounts(filteredGeneratedTickets);
             const busiestCategory = Object.entries(generatedCounts)
                 .sort((a, b) => b[1] - a[1])
@@ -525,15 +537,16 @@
             renderPatientPie(filteredCompletedTickets);
         }
 
-        function filterAnalyticsTickets(tickets, monthValue, categoryValue, dateKey) {
+        function filterAnalyticsTickets(tickets, yearValue, monthValue, categoryValue, dateKey) {
             return tickets.filter((ticket) => {
                 const ticketDate = ticket[dateKey] || ticket.createdAt;
+                const yearMatches = yearValue === 'all' || ticketDate.getFullYear().toString() === yearValue;
                 const monthMatches = monthValue === 'all' || ticketDate.getMonth().toString() === monthValue;
                 const categoryMatches = categoryValue === 'all'
                     || ticket.procedureKey === categoryValue
                     || ticket.patientType === categoryValue;
 
-                return monthMatches && categoryMatches;
+                return yearMatches && monthMatches && categoryMatches;
             });
         }
 
@@ -626,8 +639,10 @@
             }).join('');
         }
 
+        document.getElementById('yearFilter').addEventListener('change', renderDashboard);
         document.getElementById('monthFilter').addEventListener('change', renderDashboard);
         document.getElementById('categoryFilter').addEventListener('change', renderDashboard);
+        document.getElementById('downloadExcelBtn').addEventListener('click', downloadExcelReport);
 
         // Header clock: update date and time in the top-right header
         function updateHeaderClock() {
@@ -645,7 +660,184 @@
         setInterval(updateHeaderClock, 1000);
 
         loadSavedState();
+        populateYearFilter();
         render();
+
+        // Populate year filter dropdown from available ticket data
+        function populateYearFilter() {
+            const yearSelect = document.getElementById('yearFilter');
+            const allTickets = [...state.generatedTickets, ...state.completed];
+            const years = new Set();
+
+            allTickets.forEach((ticket) => {
+                const d = ticket.createdAt || ticket.completedAt;
+                if (d) years.add(d.getFullYear());
+            });
+
+            // Always include the current year
+            years.add(new Date().getFullYear());
+
+            const sortedYears = Array.from(years).sort((a, b) => b - a);
+
+            // Preserve current selection
+            const currentValue = yearSelect.value;
+
+            // Clear existing year options (keep "All years")
+            while (yearSelect.options.length > 1) {
+                yearSelect.remove(1);
+            }
+
+            sortedYears.forEach((year) => {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                yearSelect.appendChild(option);
+            });
+
+            // Restore previous selection if still valid
+            if (currentValue && Array.from(yearSelect.options).some(o => o.value === currentValue)) {
+                yearSelect.value = currentValue;
+            }
+        }
+
+        // Download Excel Summary Report
+        function downloadExcelReport() {
+            if (typeof XLSX === 'undefined') {
+                alert('Excel export library is still loading. Please try again in a moment.');
+                return;
+            }
+
+            const yearValue = document.getElementById('yearFilter').value;
+            const monthValue = document.getElementById('monthFilter').value;
+            const categoryValue = document.getElementById('categoryFilter').value;
+
+            const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+            const yearLabel = yearValue === 'all' ? 'All Years' : yearValue;
+            const monthLabel = monthValue === 'all' ? 'All Months' : monthNames[parseInt(monthValue)];
+            const categoryLabel = categoryValue === 'all' ? 'All Categories' : procedures[categoryValue]?.name || categoryValue;
+
+            const filteredGenerated = filterAnalyticsTickets(state.generatedTickets, yearValue, monthValue, categoryValue, 'createdAt');
+            const filteredCompleted = filterAnalyticsTickets(state.completed, yearValue, monthValue, categoryValue, 'completedAt');
+
+            const generatedCounts = getProcedureCounts(filteredGenerated);
+            const busiestEntry = Object.entries(generatedCounts).sort((a, b) => b[1] - a[1]).find(e => e[1] > 0);
+            const activeCats = Object.values(generatedCounts).filter(c => c > 0).length || 3;
+            const avgPerCat = formatAverage(filteredGenerated.length / activeCats);
+
+            const ipdCount = filteredCompleted.filter(t => t.patientType === 'IPD').length;
+            const opdCount = filteredCompleted.filter(t => t.patientType === 'OPD').length;
+
+            // --- Sheet 1: Summary ---
+            const summaryData = [
+                ['RADIOLOGY QUEUE MANAGEMENT SYSTEM'],
+                ['Summary Report'],
+                [],
+                ['Generated On:', new Date().toLocaleString()],
+                ['Filters Applied:'],
+                ['  Year:', yearLabel],
+                ['  Month:', monthLabel],
+                ['  Category:', categoryLabel],
+                [],
+                ['KEY METRICS'],
+                ['Total Tickets Generated', filteredGenerated.length],
+                ['Total Tickets Completed', filteredCompleted.length],
+                ['Busiest Category', busiestEntry ? procedures[busiestEntry[0]].name : 'None'],
+                ['Average Per Category', avgPerCat],
+                [],
+                ['CATEGORY BREAKDOWN'],
+                ['Category', 'Generated', 'Completed'],
+            ];
+
+            Object.entries(procedures).forEach(([key, proc]) => {
+                const gen = filteredGenerated.filter(t => t.procedureKey === key).length;
+                const comp = filteredCompleted.filter(t => t.procedureKey === key).length;
+                summaryData.push([proc.name, gen, comp]);
+            });
+
+            summaryData.push([]);
+            summaryData.push(['PATIENT TYPE BREAKDOWN (Completed)']);
+            summaryData.push(['Patient Type', 'Count', 'Percentage']);
+            const totalCompleted = ipdCount + opdCount;
+            summaryData.push(['In-Patient (IPD)', ipdCount, totalCompleted ? Math.round((ipdCount / totalCompleted) * 100) + '%' : '0%']);
+            summaryData.push(['Out-Patient (OPD)', opdCount, totalCompleted ? Math.round((opdCount / totalCompleted) * 100) + '%' : '0%']);
+
+            const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+
+            // Set column widths
+            wsSummary['!cols'] = [
+                { wch: 28 },
+                { wch: 18 },
+                { wch: 14 }
+            ];
+
+            // --- Sheet 2: Ticket Details ---
+            const detailHeaders = ['Ticket ID', 'Procedure', 'Patient Type', 'Created At', 'Called At', 'Completed At', 'Status'];
+            const detailData = [detailHeaders];
+
+            // Combine generated and completed, deduplicating by ID
+            const allMap = new Map();
+            filteredGenerated.forEach(t => {
+                allMap.set(t.id, { ...t, status: 'Generated' });
+            });
+            filteredCompleted.forEach(t => {
+                const existing = allMap.get(t.id);
+                allMap.set(t.id, { ...(existing || {}), ...t, status: 'Completed' });
+            });
+
+            // Mark currently serving
+            Object.values(state.serving).filter(Boolean).forEach(t => {
+                if (allMap.has(t.id)) {
+                    allMap.get(t.id).status = 'Serving';
+                }
+            });
+
+            // Mark waiting
+            Object.values(state.queues).flat().forEach(t => {
+                if (allMap.has(t.id)) {
+                    allMap.get(t.id).status = 'Waiting';
+                }
+            });
+
+            Array.from(allMap.values())
+                .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))
+                .forEach(t => {
+                    detailData.push([
+                        t.id,
+                        procedures[t.procedureKey]?.name || t.procedureKey,
+                        t.patientType,
+                        t.createdAt ? t.createdAt.toLocaleString() : '',
+                        t.calledAt ? t.calledAt.toLocaleString() : '',
+                        t.completedAt ? t.completedAt.toLocaleString() : '',
+                        t.status
+                    ]);
+                });
+
+            const wsDetail = XLSX.utils.aoa_to_sheet(detailData);
+            wsDetail['!cols'] = [
+                { wch: 12 },
+                { wch: 14 },
+                { wch: 14 },
+                { wch: 22 },
+                { wch: 22 },
+                { wch: 22 },
+                { wch: 12 }
+            ];
+
+            // Create workbook
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary');
+            XLSX.utils.book_append_sheet(wb, wsDetail, 'Ticket Details');
+
+            // Generate filename with date
+            const now = new Date();
+            const dateStamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+            const filterSuffix = yearValue !== 'all' || monthValue !== 'all' || categoryValue !== 'all'
+                ? `_${yearLabel}_${monthLabel}_${categoryLabel}`.replace(/\s+/g, '-')
+                : '';
+            const fileName = `Radiology_QMS_Report_${dateStamp}${filterSuffix}.xlsx`;
+
+            XLSX.writeFile(wb, fileName);
+        }
     </script>
 </body>
 </html>

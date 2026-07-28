@@ -296,10 +296,41 @@ a {
 
 .analytics-toolbar {
     display: grid;
-    grid-template-columns: 220px 240px;
+    grid-template-columns: 160px 220px 240px auto;
     gap: 12px;
     align-items: end;
     justify-content: start;
+}
+
+.export-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 0 18px;
+    min-height: 38px;
+    border: 1.5px solid var(--green-strong);
+    border-radius: 9px;
+    background: var(--green-soft);
+    color: var(--green-strong);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.export-btn:hover {
+    background: var(--green-strong);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(8, 116, 71, 0.18);
+}
+
+.export-btn:active {
+    transform: scale(0.97);
+}
+
+.export-btn svg {
+    flex-shrink: 0;
 }
 
 .filter-control,
@@ -1472,7 +1503,12 @@ a {
     .analytics-secondary { grid-row: 4; }
 
     .analytics-toolbar {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .export-btn {
+        grid-column: 1 / -1;
+        justify-content: center;
     }
 }
 
