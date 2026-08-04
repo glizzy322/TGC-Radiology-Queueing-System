@@ -85,21 +85,23 @@ $pageData = $pageData ?? include __DIR__ . '/../data/public-display-data.php';
                 <div class="serving-col">
                     <div class="serving-col-header ipd-header">IPD</div>
                     <div class="serving-col-body">
-                        <?php foreach (($pageData['serving']['ipd'] ?? []) as $item): ?>
-                            <div class="serving-col-row">
-                                <span class="serving-code proc-<?= htmlspecialchars($item['codeClass'] ?? '', ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($item['id'] ?? '', ENT_QUOTES, 'UTF-8') ?></span>
+                        <?php for ($i = 0; $i < 5; $i++): ?>
+                            <?php $item = $pageData['serving']['ipd'][$i] ?? null; ?>
+                            <div class="serving-col-row <?= $item ? '' : 'empty-row' ?>">
+                                <span class="serving-code <?= $item ? 'proc-' . htmlspecialchars($item['codeClass'] ?? '', ENT_QUOTES, 'UTF-8') : 'empty-code' ?>"><?= $item ? htmlspecialchars($item['id'] ?? '', ENT_QUOTES, 'UTF-8') : '&nbsp;' ?></span>
                             </div>
-                        <?php endforeach; ?>
+                        <?php endfor; ?>
                     </div>
                 </div>
                 <div class="serving-col">
                     <div class="serving-col-header opd-header">OPD</div>
                     <div class="serving-col-body">
-                        <?php foreach (($pageData['serving']['opd'] ?? []) as $item): ?>
-                            <div class="serving-col-row">
-                                <span class="serving-code proc-<?= htmlspecialchars($item['codeClass'] ?? '', ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($item['id'] ?? '', ENT_QUOTES, 'UTF-8') ?></span>
+                        <?php for ($i = 0; $i < 5; $i++): ?>
+                            <?php $item = $pageData['serving']['opd'][$i] ?? null; ?>
+                            <div class="serving-col-row <?= $item ? '' : 'empty-row' ?>">
+                                <span class="serving-code <?= $item ? 'proc-' . htmlspecialchars($item['codeClass'] ?? '', ENT_QUOTES, 'UTF-8') : 'empty-code' ?>"><?= $item ? htmlspecialchars($item['id'] ?? '', ENT_QUOTES, 'UTF-8') : '&nbsp;' ?></span>
                             </div>
-                        <?php endforeach; ?>
+                        <?php endfor; ?>
                     </div>
                 </div>
             </div>
@@ -109,6 +111,11 @@ $pageData = $pageData ?? include __DIR__ . '/../data/public-display-data.php';
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const storageKey = 'radiologyQueueState';
+        const adsDbName = 'radiologyAdsDb';
+        const adsStoreName = 'ads';
+        let publicAdIndex = 0;
+        let publicAdTimer = null;
+        let publicAdsSignature = '';
         const procedures = {
             xray: { title: 'X-RAY', spokenName: 'X-Ray', codeClass: 'XR' },
             ultrasound: { title: 'Ultrasound', spokenName: 'Ultrasound', codeClass: 'UT' },
@@ -122,6 +129,73 @@ $pageData = $pageData ?? include __DIR__ . '/../data/public-display-data.php';
                 return JSON.parse(localStorage.getItem(storageKey) || '{}');
             } catch (error) {
                 return {};
+            }
+        }
+
+        function openAdsDb() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(adsDbName, 1);
+                request.onupgradeneeded = () => {
+                    const db = request.result;
+                    if (!db.objectStoreNames.contains(adsStoreName)) {
+                        db.createObjectStore(adsStoreName, { keyPath: 'id' });
+                    }
+                };
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        async function getDisplayAds() {
+            const db = await openAdsDb();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(adsStoreName, 'readonly');
+                const request = tx.objectStore(adsStoreName).getAll();
+                request.onsuccess = () => resolve(request.result
+                    .filter((ad) => ad.active)
+                    .sort((a, b) => (a.order || 0) - (b.order || 0)));
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        function renderDisplayAd(ads) {
+            const container = document.querySelector('.slideshow-container');
+            if (!container || !ads.length) return;
+            clearTimeout(publicAdTimer);
+            if (publicAdIndex >= ads.length) publicAdIndex = 0;
+
+            const ad = ads[publicAdIndex];
+            const isVideo = (ad.type || '').startsWith('video/');
+            container.innerHTML = isVideo
+                ? `<video class="display-ad-media active" src="${ad.src}" autoplay muted playsinline></video>`
+                : `<img class="display-ad-media active" src="${ad.src}" alt="${ad.name}">`;
+
+            const next = () => {
+                publicAdIndex = (publicAdIndex + 1) % ads.length;
+                renderDisplayAd(ads);
+            };
+
+            if (isVideo) {
+                const video = container.querySelector('video');
+                video.onended = next;
+                publicAdTimer = setTimeout(next, Math.max(3, ad.duration || 8) * 1000);
+            } else {
+                publicAdTimer = setTimeout(next, Math.max(3, ad.duration || 8) * 1000);
+            }
+        }
+
+        async function refreshDisplayAds() {
+            try {
+                const ads = await getDisplayAds();
+                if (!ads.length) return;
+                const signature = ads.map((ad) => `${ad.id}:${ad.active}:${ad.duration}`).join('|');
+                if (signature !== publicAdsSignature) {
+                    publicAdsSignature = signature;
+                    publicAdIndex = 0;
+                    renderDisplayAd(ads);
+                }
+            } catch (error) {
+                console.warn('Unable to load display ads.', error);
             }
         }
 
@@ -174,15 +248,18 @@ $pageData = $pageData ?? include __DIR__ . '/../data/public-display-data.php';
                 .sort((a, b) => getServingOrder(a.ticket, history) - getServingOrder(b.ticket, history));
 
             const buildRows = (patientType) => {
-                const rows = items
+                const patientItems = items
                     .filter((item) => item.ticket.patientType === patientType)
+                    .slice(0, 5);
+
+                const rows = patientItems
                     .map((item) => `
                         <div class="serving-col-row">
                             <span class="serving-code proc-${item.procedure.codeClass}">${item.ticket.id}</span>
                         </div>
                     `).join('');
 
-                return rows || '<div class="serving-col-row"><span class="serving-code empty-code">-</span></div>';
+                return rows + Array.from({ length: 5 - patientItems.length }, () => '<div class="serving-col-row empty-row"><span class="serving-code empty-code">&nbsp;</span></div>').join('');
             };
 
             ipdBody.innerHTML = buildRows('IPD');
@@ -194,10 +271,10 @@ $pageData = $pageData ?? include __DIR__ . '/../data/public-display-data.php';
             return String(ticketId).replace(/([A-Z])/g, '$1 ').replace(/(\d)/g, '$1 ').replace(/\s+/g, ' ').trim();
         }
 
-        function speakAnnouncement(ticket, procedure) {
+        function speakAnnouncement(ticket, procedure, spokenLabel = procedure.spokenName) {
             if (!audioEnabled || !('speechSynthesis' in window)) return;
 
-            const message = `Queue number ${getSpokenTicketId(ticket.id)}, please proceed to ${procedure.spokenName}.`;
+            const message = `Queue number ${getSpokenTicketId(ticket.id)}, please proceed to ${spokenLabel}.`;
             window.speechSynthesis.cancel();
             const utterance = new SpeechSynthesisUtterance(message);
             utterance.rate = 0.9;
@@ -216,7 +293,15 @@ $pageData = $pageData ?? include __DIR__ . '/../data/public-display-data.php';
                     const previousSet = new Set(previousIds ? previousIds.split('|') : []);
                     tickets.forEach((ticket) => {
                         if (!previousSet.has(ticket.id)) {
-                            speakAnnouncement(ticket, procedure);
+                            const slotIndex = Array.isArray(serving?.[key])
+                                ? serving[key].findIndex((servedTicket) => servedTicket?.id === ticket.id)
+                                : -1;
+
+                            const spokenLabel = key === 'xray' || key === 'ultrasound'
+                                ? `${procedure.spokenName} ${slotIndex >= 0 ? slotIndex + 1 : 1}`
+                                : procedure.spokenName;
+
+                            speakAnnouncement(ticket, procedure, spokenLabel);
                         }
                     });
                 }
@@ -232,7 +317,9 @@ $pageData = $pageData ?? include __DIR__ . '/../data/public-display-data.php';
         }
 
         refreshDisplayFromReception();
+        refreshDisplayAds();
         setInterval(refreshDisplayFromReception, 1000);
+        setInterval(refreshDisplayAds, 5000);
         window.addEventListener('storage', refreshDisplayFromReception);
     });
 </script>
