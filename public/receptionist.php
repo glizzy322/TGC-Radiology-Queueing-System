@@ -24,6 +24,9 @@
                 <button class="rqs-nav-item nav-item" data-view="manage" type="button">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><line x1="10" x2="21" y1="6" y2="6"/><line x1="10" x2="21" y1="12" y2="12"/><line x1="10" x2="21" y1="18" y2="18"/><path d="M4 6h1v4"/><path d="M4 10h2"/><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"/></svg> Manage queue
                 </button>
+                <button class="rqs-nav-item nav-item" data-view="ads" type="button">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><rect width="18" height="14" x="3" y="5" rx="2"/><circle cx="8" cy="10" r="1.4"/><path d="m21 15-5-5L5 21"/></svg> Ads
+                </button>
             </nav>
 
             <div class="rqs-sidebar-foot">
@@ -46,45 +49,46 @@
             <section class="view active" id="dashboardView" aria-labelledby="dashboardTitle">
                 <h2 id="dashboardTitle" class="sr-only">Dashboard</h2>
                 <div class="analytics-dashboard">
-                    <div class="analytics-toolbar">
-                        <label class="filter-control">
-                            <span>Year</span>
-                            <select id="yearFilter">
-                                <option value="all">All years</option>
-                            </select>
-                        </label>
-                        <label class="filter-control">
-                            <span>Month</span>
-                            <select id="monthFilter">
-                                <option value="all">All months</option>
-                                <option value="0">January</option>
-                                <option value="1">February</option>
-                                <option value="2">March</option>
-                                <option value="3">April</option>
-                                <option value="4">May</option>
-                                <option value="5">June</option>
-                                <option value="6">July</option>
-                                <option value="7">August</option>
-                                <option value="8">September</option>
-                                <option value="9">October</option>
-                                <option value="10">November</option>
-                                <option value="11">December</option>
-                            </select>
-                        </label>
-                        <label class="filter-control">
-                            <span>Category</span>
-                            <select id="categoryFilter">
-                                <option value="all">All categories</option>
-                                <option value="xray">X-Ray</option>
-                                <option value="ultrasound">Ultrasound</option>
-                                <option value="ctscan">CT Scan</option>
-                            </select>
-                        </label>
-                        <button class="export-btn" id="downloadExcelBtn" type="button" title="Download Summary Report as Excel">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
-                            Download Excel Report
-                        </button>
-                    </div>
+                    <section class="panel analytics-filters-panel">
+                        <div class="analytics-filters-header">
+                            <div>
+                                <p class="filters-kicker">Report filters</p>
+                                <h3>Refine the analytics view</h3>
+                                <p class="filters-subtitle">Filter the summary by date range and procedure, or jump to a preset range.</p>
+                            </div>
+                        </div>
+
+                        <div class="analytics-toolbar">
+                            <label class="filter-control">
+                                <span>From</span>
+                                <input id="startDateFilter" type="date">
+                            </label>
+                            <label class="filter-control">
+                                <span>To</span>
+                                <input id="endDateFilter" type="date">
+                            </label>
+                            <label class="filter-control">
+                                <span>Category</span>
+                                <select id="categoryFilter">
+                                    <option value="all">All categories</option>
+                                    <option value="xray">X-Ray</option>
+                                    <option value="ultrasound">Ultrasound</option>
+                                    <option value="ctscan">CT Scan</option>
+                                </select>
+                            </label>
+                            <button class="export-btn" id="downloadExcelBtn" type="button" title="Download Summary Report as Excel">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                                Download Excel Report
+                            </button>
+                        </div>
+
+                        <div class="date-shortcuts" aria-label="Quick date filters">
+                            <button class="date-shortcut-btn" type="button" data-range="today">This day</button>
+                            <button class="date-shortcut-btn" type="button" data-range="week">This week</button>
+                            <button class="date-shortcut-btn" type="button" data-range="month">This month</button>
+                            <button class="date-shortcut-btn" type="button" data-range="year">This year</button>
+                        </div>
+                    </section>
 
                     <div class="analytics-layout">
                         <div class="analytics-main-col">
@@ -202,6 +206,62 @@
                 <div class="manage-grid" id="manageGrid"></div>
             </section>
 
+            <section class="view" id="adsView" aria-labelledby="adsTitle">
+                <h2 id="adsTitle" class="sr-only">Ads</h2>
+                <div class="ads-dashboard">
+                    <section class="panel ads-card">
+                        <div class="ads-panel-head">
+                            <h3>Ad library</h3>
+                            <button class="ads-add-btn" id="showAdFormBtn" type="button">
+                                <span>+</span> Add ad
+                            </button>
+                        </div>
+
+                        <form class="ads-form" id="adForm" hidden>
+                            <div class="ads-form-head">
+                                <h3>Add a new ad</h3>
+                                <button class="ads-icon-btn" id="cancelAdFormBtn" type="button" aria-label="Close ad form">x</button>
+                            </div>
+                            <label class="ads-upload">
+                                <span class="ads-upload-icon">↑</span>
+                                <strong>Click to choose a file from your device</strong>
+                                <small>JPG, PNG, WEBP, MP4, WEBM, or MOV</small>
+                                <input id="adFileInput" type="file" accept="image/*,video/mp4,video/webm,video/quicktime" hidden>
+                            </label>
+                            <div class="ads-file-note" id="adFileNote">No file selected.</div>
+                            <label class="ads-duration-control">
+                                <span>Seconds on screen</span>
+                                <input id="adDurationInput" type="number" min="3" max="60" value="8">
+                            </label>
+                            <label class="ads-check-control">
+                                <input id="adActiveInput" type="checkbox" checked>
+                                <span>Show this ad on the public display</span>
+                            </label>
+                            <div class="ads-form-actions">
+                                <button class="ads-save-btn" id="saveAdBtn" type="submit">Add ad</button>
+                                <button class="ads-cancel-btn" id="cancelAdFormBtn2" type="button">Cancel</button>
+                            </div>
+                        </form>
+
+                        <div class="ads-list" id="adsList"></div>
+                    </section>
+
+                    <section class="panel ads-preview-card">
+                        <div class="ads-preview-head">
+                            <h3>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
+                                Public display preview
+                            </h3>
+                            <span>ON AIR</span>
+                        </div>
+                        <div class="ads-preview-stage" id="adsPreviewStage">
+                            <div class="ads-preview-empty">No active ads yet.</div>
+                        </div>
+                        <p class="ads-preview-note">Rotates automatically through every ad marked Active. Images hold for their set duration; videos play through once, then advance.</p>
+                    </section>
+                </div>
+            </section>
+
             <section class="view" id="accountView" aria-labelledby="accountTitle">
                 <h2 id="accountTitle" class="sr-only">Account</h2>
                 <section class="panel account-card">
@@ -217,7 +277,7 @@
 
     <script>
         const procedures = {
-            xray: { name: 'X-Ray', shortName: 'X-RAY', chartLabel: 'Xray', prefix: 'XR', maxServing: 1 },
+            xray: { name: 'X-Ray', shortName: 'X-RAY', chartLabel: 'Xray', prefix: 'XR', maxServing: 2 },
             ultrasound: { name: 'Ultrasound', shortName: 'UTZ', chartLabel: 'Utz', prefix: 'UT', maxServing: 2 },
             ctscan: { name: 'CT Scan', shortName: 'CTS', chartLabel: 'CTS', prefix: 'CT', maxServing: 1 }
         };
@@ -234,7 +294,7 @@
                 ctscan: []
             },
             serving: {
-                xray: [null],
+                xray: [null, null],
                 ultrasound: [null, null],
                 ctscan: [null]
             },
@@ -247,6 +307,76 @@
             calledTickets: []
         };
         const STORAGE_KEY = 'radiologyQueueState';
+        const ADS_DB_NAME = 'radiologyAdsDb';
+        const ADS_STORE_NAME = 'ads';
+        let adLibrary = [];
+        let selectedAdFile = null;
+        let selectedAdDataUrl = '';
+        let adsPreviewIndex = 0;
+        let adsPreviewTimer = null;
+
+        function openAdsDb() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(ADS_DB_NAME, 1);
+                request.onupgradeneeded = () => {
+                    const db = request.result;
+                    if (!db.objectStoreNames.contains(ADS_STORE_NAME)) {
+                        db.createObjectStore(ADS_STORE_NAME, { keyPath: 'id' });
+                    }
+                };
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        async function getStoredAds() {
+            const db = await openAdsDb();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(ADS_STORE_NAME, 'readonly');
+                const request = tx.objectStore(ADS_STORE_NAME).getAll();
+                request.onsuccess = () => resolve(request.result.sort((a, b) => (a.order || 0) - (b.order || 0)));
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        async function saveStoredAd(ad) {
+            const db = await openAdsDb();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(ADS_STORE_NAME, 'readwrite');
+                tx.objectStore(ADS_STORE_NAME).put(ad);
+                tx.oncomplete = resolve;
+                tx.onerror = () => reject(tx.error);
+            });
+        }
+
+        async function deleteStoredAd(id) {
+            const db = await openAdsDb();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(ADS_STORE_NAME, 'readwrite');
+                tx.objectStore(ADS_STORE_NAME).delete(id);
+                tx.oncomplete = resolve;
+                tx.onerror = () => reject(tx.error);
+            });
+        }
+
+        function readFileAsDataUrl(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = () => reject(reader.error);
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function escapeHtml(value) {
+            return String(value).replace(/[&<>"']/g, (char) => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            }[char]));
+        }
 
         function parseTicketDates(ticket) {
             if (!ticket) return null;
@@ -508,28 +638,34 @@
                 const servingSlots = Array.from({ length: maxSlots }, (_, index) => servingList[index] || null);
                 const servingCount = servingSlots.filter(Boolean).length;
 
-                const servingHtml = servingSlots.map((ticket, slotIndex) => `
-                    <div class="rqs-serving-slot">
-                        ${maxSlots > 1 ? `<div class="rqs-slot-label">Slot ${slotIndex + 1}</div>` : ''}
-                        <div class="rqs-serving-hero proc-${key}">
-                            ${ticket ? `
-                                <div class="label">Now serving</div>
-                                <div class="num rqs-num">${ticket.id}</div>
-                                <span class="category-badge">${ticket.patientType}</span>
-                            ` : `
-                                <div class="none">No patient being served</div>
-                            `}
+                const servingHtml = servingSlots.map((ticket, slotIndex) => {
+                    const slotLabel = key === 'xray'
+                        ? `Xray ${slotIndex + 1}`
+                        : `${procedure.name}${maxSlots > 1 ? ` ${slotIndex + 1}` : ''}`;
+
+                    return `
+                        <div class="rqs-serving-slot" id="${key}-${slotIndex + 1}">
+                            <div class="rqs-slot-label">${slotLabel}</div>
+                            <div class="rqs-serving-hero proc-${key}">
+                                ${ticket ? `
+                                    <div class="label">Now serving</div>
+                                    <div class="num rqs-num">${ticket.id}</div>
+                                    <span class="category-badge">${ticket.patientType}</span>
+                                ` : `
+                                    <div class="none">No patient being served</div>
+                                `}
+                            </div>
+                            <div class="rqs-action-row">
+                                <button class="secondary-action" type="button" ${ticket ? '' : 'disabled'} onclick="completePatient('${key}', ${slotIndex})">
+                                    <span class="check-icon"></span> Complete
+                                </button>
+                                <button class="primary-action small" type="button" ${ticket || waiting.length === 0 ? 'disabled' : ''} onclick="callNext('${key}', ${slotIndex})">
+                                    <span class="call-icon"></span> Call next
+                                </button>
+                            </div>
                         </div>
-                        <div class="rqs-action-row">
-                            <button class="secondary-action" type="button" ${ticket ? '' : 'disabled'} onclick="completePatient('${key}', ${slotIndex})">
-                                <span class="check-icon"></span> Complete
-                            </button>
-                            <button class="primary-action small" type="button" ${ticket || waiting.length === 0 ? 'disabled' : ''} onclick="callNext('${key}', ${slotIndex})">
-                                <span class="call-icon"></span> Call next
-                            </button>
-                        </div>
-                    </div>
-                `).join('');
+                    `;
+                }).join('');
 
                 return `
                     <section class="panel rqs-exam-col manage-card" style="padding: 18px;">
@@ -562,11 +698,11 @@
         }
 
         function renderDashboard() {
-            const yearValue = document.getElementById('yearFilter').value;
-            const monthValue = document.getElementById('monthFilter').value;
+            const startDateValue = document.getElementById('startDateFilter').value;
+            const endDateValue = document.getElementById('endDateFilter').value;
             const categoryValue = document.getElementById('categoryFilter').value;
-            const filteredGeneratedTickets = filterAnalyticsTickets(state.generatedTickets, yearValue, monthValue, categoryValue, 'createdAt');
-            const filteredCompletedTickets = filterAnalyticsTickets(state.completed, yearValue, monthValue, categoryValue, 'completedAt');
+            const filteredGeneratedTickets = filterAnalyticsTickets(state.generatedTickets, startDateValue, endDateValue, categoryValue, 'createdAt');
+            const filteredCompletedTickets = filterAnalyticsTickets(state.completed, startDateValue, endDateValue, categoryValue, 'completedAt');
             const generatedCounts = getProcedureCounts(filteredGeneratedTickets);
             const busiestCategory = Object.entries(generatedCounts)
                 .sort((a, b) => b[1] - a[1])
@@ -582,18 +718,104 @@
 
             renderProcedureChart(filteredGeneratedTickets);
             renderPatientPie(filteredCompletedTickets);
+            syncDateShortcutState();
         }
 
-        function filterAnalyticsTickets(tickets, yearValue, monthValue, categoryValue, dateKey) {
+        function toDateInputValue(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function getWeekStart(date) {
+            const result = new Date(date);
+            const day = result.getDay();
+            const offset = day === 0 ? -6 : 1 - day;
+            result.setDate(result.getDate() + offset);
+            result.setHours(0, 0, 0, 0);
+            return result;
+        }
+
+        function getWeekEnd(date) {
+            const result = getWeekStart(date);
+            result.setDate(result.getDate() + 6);
+            result.setHours(23, 59, 59, 999);
+            return result;
+        }
+
+        function setDateRange(startDate, endDate) {
+            document.getElementById('startDateFilter').value = startDate ? toDateInputValue(startDate) : '';
+            document.getElementById('endDateFilter').value = endDate ? toDateInputValue(endDate) : '';
+            renderDashboard();
+        }
+
+        function syncDateShortcutState() {
+            const shortcutButtons = document.querySelectorAll('[data-range]');
+            const startValue = document.getElementById('startDateFilter').value;
+            const endValue = document.getElementById('endDateFilter').value;
+
+            shortcutButtons.forEach((button) => {
+                button.classList.remove('active');
+                const range = button.dataset.range;
+                const today = new Date();
+                let expectedStart = '';
+                let expectedEnd = '';
+
+                if (range === 'today') {
+                    expectedStart = toDateInputValue(today);
+                    expectedEnd = expectedStart;
+                } else if (range === 'week') {
+                    expectedStart = toDateInputValue(getWeekStart(today));
+                    expectedEnd = toDateInputValue(getWeekEnd(today));
+                } else if (range === 'month') {
+                    expectedStart = toDateInputValue(new Date(today.getFullYear(), today.getMonth(), 1));
+                    expectedEnd = toDateInputValue(new Date(today.getFullYear(), today.getMonth() + 1, 0));
+                } else if (range === 'year') {
+                    expectedStart = toDateInputValue(new Date(today.getFullYear(), 0, 1));
+                    expectedEnd = toDateInputValue(new Date(today.getFullYear(), 11, 31));
+                }
+
+                if (startValue === expectedStart && endValue === expectedEnd) {
+                    button.classList.add('active');
+                }
+            });
+        }
+
+        function applyDateShortcut(range) {
+            const today = new Date();
+
+            if (range === 'today') {
+                setDateRange(today, today);
+                return;
+            }
+
+            if (range === 'week') {
+                setDateRange(getWeekStart(today), getWeekEnd(today));
+                return;
+            }
+
+            if (range === 'month') {
+                setDateRange(new Date(today.getFullYear(), today.getMonth(), 1), new Date(today.getFullYear(), today.getMonth() + 1, 0));
+                return;
+            }
+
+            if (range === 'year') {
+                setDateRange(new Date(today.getFullYear(), 0, 1), new Date(today.getFullYear(), 11, 31));
+            }
+        }
+
+        function filterAnalyticsTickets(tickets, startDateValue, endDateValue, categoryValue, dateKey) {
+            const startDate = startDateValue ? new Date(`${startDateValue}T00:00:00`) : null;
+            const endDate = endDateValue ? new Date(`${endDateValue}T23:59:59.999`) : null;
+
             return tickets.filter((ticket) => {
                 const ticketDate = ticket[dateKey] || ticket.createdAt;
-                const yearMatches = yearValue === 'all' || ticketDate.getFullYear().toString() === yearValue;
-                const monthMatches = monthValue === 'all' || ticketDate.getMonth().toString() === monthValue;
-                const categoryMatches = categoryValue === 'all'
-                    || ticket.procedureKey === categoryValue
-                    || ticket.patientType === categoryValue;
+                const startMatches = !startDate || ticketDate >= startDate;
+                const endMatches = !endDate || ticketDate <= endDate;
+                const categoryMatches = categoryValue === 'all' || ticket.procedureKey === categoryValue;
 
-                return yearMatches && monthMatches && categoryMatches;
+                return startMatches && endMatches && categoryMatches;
             });
         }
 
@@ -688,10 +910,168 @@
             }).join('');
         }
 
-        document.getElementById('yearFilter').addEventListener('change', renderDashboard);
-        document.getElementById('monthFilter').addEventListener('change', renderDashboard);
+        async function loadAds() {
+            try {
+                adLibrary = await getStoredAds();
+                renderAdsView();
+                renderAdsPreview();
+            } catch (error) {
+                console.warn('Unable to load ads.', error);
+            }
+        }
+
+        function renderAdsView() {
+            const list = document.getElementById('adsList');
+            if (!list) return;
+
+            if (!adLibrary.length) {
+                list.innerHTML = '<div class="ads-empty-row">No ads added yet. Add an image or video to start the public display rotation.</div>';
+                return;
+            }
+
+            list.innerHTML = adLibrary.map((ad) => {
+                const isVideo = (ad.type || '').startsWith('video/');
+                return `
+                    <div class="ad-row">
+                        <span class="ad-grip">::</span>
+                        <div class="ad-thumb">
+                            ${isVideo
+                                ? `<video src="${ad.src}" muted playsinline></video>`
+                                : `<img src="${ad.src}" alt="${escapeHtml(ad.name)}">`
+                            }
+                            <span>${isVideo ? '▶' : '▧'}</span>
+                        </div>
+                        <div class="ad-main">
+                            <strong>${escapeHtml(ad.name)}</strong>
+                            <small>${ad.duration}s on screen</small>
+                        </div>
+                        <span class="ad-status ${ad.active ? 'active' : 'paused'}">${ad.active ? 'Active' : 'Paused'}</span>
+                        <button class="ad-small-btn" type="button" onclick="toggleAdStatus('${ad.id}')">${ad.active ? 'Pause' : 'Resume'}</button>
+                        <button class="ads-icon-btn" type="button" onclick="editAdDuration('${ad.id}')" aria-label="Edit ad">✎</button>
+                        <button class="ads-icon-btn" type="button" onclick="removeAd('${ad.id}')" aria-label="Delete ad">⌫</button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function resetAdForm() {
+            const form = document.getElementById('adForm');
+            const fileInput = document.getElementById('adFileInput');
+            const fileNote = document.getElementById('adFileNote');
+            const durationInput = document.getElementById('adDurationInput');
+            const activeInput = document.getElementById('adActiveInput');
+            selectedAdFile = null;
+            selectedAdDataUrl = '';
+            if (fileInput) fileInput.value = '';
+            if (fileNote) fileNote.textContent = 'No file selected.';
+            if (durationInput) durationInput.value = 8;
+            if (activeInput) activeInput.checked = true;
+            if (form) form.hidden = true;
+        }
+
+        async function toggleAdStatus(id) {
+            const ad = adLibrary.find((item) => item.id === id);
+            if (!ad) return;
+            ad.active = !ad.active;
+            await saveStoredAd(ad);
+            await loadAds();
+        }
+
+        async function editAdDuration(id) {
+            const ad = adLibrary.find((item) => item.id === id);
+            if (!ad) return;
+            const value = prompt('Seconds on screen', ad.duration);
+            if (value === null) return;
+            const duration = Math.max(3, Math.min(60, Number(value) || ad.duration));
+            ad.duration = duration;
+            await saveStoredAd(ad);
+            await loadAds();
+        }
+
+        async function removeAd(id) {
+            if (!confirm('Remove this ad from the library?')) return;
+            await deleteStoredAd(id);
+            await loadAds();
+        }
+
+        function renderAdsPreview() {
+            const stage = document.getElementById('adsPreviewStage');
+            if (!stage) return;
+            clearTimeout(adsPreviewTimer);
+
+            const activeAds = adLibrary.filter((ad) => ad.active);
+            if (!activeAds.length) {
+                stage.innerHTML = '<div class="ads-preview-empty">No active ads yet.</div>';
+                return;
+            }
+
+            if (adsPreviewIndex >= activeAds.length) adsPreviewIndex = 0;
+            const ad = activeAds[adsPreviewIndex];
+            const isVideo = (ad.type || '').startsWith('video/');
+            stage.innerHTML = `
+                <div class="ads-preview-brand"><span>A+</span> TAGUM GLOBAL</div>
+                ${isVideo
+                    ? `<video class="ads-preview-media" src="${ad.src}" autoplay muted playsinline></video>`
+                    : `<img class="ads-preview-media" src="${ad.src}" alt="${escapeHtml(ad.name)}">`
+                }
+                <div class="ads-preview-dot"></div>
+            `;
+
+            const next = () => {
+                adsPreviewIndex = (adsPreviewIndex + 1) % activeAds.length;
+                renderAdsPreview();
+            };
+
+            if (isVideo) {
+                const video = stage.querySelector('video');
+                video.onended = next;
+                adsPreviewTimer = setTimeout(next, Math.max(3, ad.duration || 8) * 1000);
+            } else {
+                adsPreviewTimer = setTimeout(next, Math.max(3, ad.duration || 8) * 1000);
+            }
+        }
+
+        document.getElementById('startDateFilter').addEventListener('change', renderDashboard);
+        document.getElementById('endDateFilter').addEventListener('change', renderDashboard);
         document.getElementById('categoryFilter').addEventListener('change', renderDashboard);
         document.getElementById('downloadExcelBtn').addEventListener('click', downloadExcelReport);
+        document.querySelectorAll('[data-range]').forEach((button) => {
+            button.addEventListener('click', () => applyDateShortcut(button.dataset.range));
+        });
+        document.getElementById('showAdFormBtn').addEventListener('click', () => {
+            document.getElementById('adForm').hidden = false;
+        });
+        document.getElementById('cancelAdFormBtn').addEventListener('click', resetAdForm);
+        document.getElementById('cancelAdFormBtn2').addEventListener('click', resetAdForm);
+        document.getElementById('adFileInput').addEventListener('change', async (event) => {
+            selectedAdFile = event.target.files[0] || null;
+            selectedAdDataUrl = selectedAdFile ? await readFileAsDataUrl(selectedAdFile) : '';
+            document.getElementById('adFileNote').textContent = selectedAdFile
+                ? selectedAdFile.name
+                : 'No file selected.';
+        });
+        document.getElementById('adForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            if (!selectedAdFile || !selectedAdDataUrl) {
+                alert('Please choose an image or video first.');
+                return;
+            }
+
+            const ad = {
+                id: `ad-${Date.now()}`,
+                name: selectedAdFile.name,
+                type: selectedAdFile.type || 'application/octet-stream',
+                src: selectedAdDataUrl,
+                duration: Math.max(3, Math.min(60, Number(document.getElementById('adDurationInput').value) || 8)),
+                active: document.getElementById('adActiveInput').checked,
+                order: adLibrary.length + 1,
+                createdAt: new Date().toISOString()
+            };
+
+            await saveStoredAd(ad);
+            resetAdForm();
+            await loadAds();
+        });
 
         // Header clock: update date and time in the top-right header
         function updateHeaderClock() {
@@ -709,45 +1089,8 @@
         setInterval(updateHeaderClock, 1000);
 
         loadSavedState();
-        populateYearFilter();
         render();
-
-        // Populate year filter dropdown from available ticket data
-        function populateYearFilter() {
-            const yearSelect = document.getElementById('yearFilter');
-            const allTickets = [...state.generatedTickets, ...state.completed];
-            const years = new Set();
-
-            allTickets.forEach((ticket) => {
-                const d = ticket.createdAt || ticket.completedAt;
-                if (d) years.add(d.getFullYear());
-            });
-
-            // Always include the current year
-            years.add(new Date().getFullYear());
-
-            const sortedYears = Array.from(years).sort((a, b) => b - a);
-
-            // Preserve current selection
-            const currentValue = yearSelect.value;
-
-            // Clear existing year options (keep "All years")
-            while (yearSelect.options.length > 1) {
-                yearSelect.remove(1);
-            }
-
-            sortedYears.forEach((year) => {
-                const option = document.createElement('option');
-                option.value = year;
-                option.textContent = year;
-                yearSelect.appendChild(option);
-            });
-
-            // Restore previous selection if still valid
-            if (currentValue && Array.from(yearSelect.options).some(o => o.value === currentValue)) {
-                yearSelect.value = currentValue;
-            }
-        }
+        loadAds();
 
         // Download Excel Summary Report
         function downloadExcelReport() {
@@ -756,17 +1099,16 @@
                 return;
             }
 
-            const yearValue = document.getElementById('yearFilter').value;
-            const monthValue = document.getElementById('monthFilter').value;
+            const startDateValue = document.getElementById('startDateFilter').value;
+            const endDateValue = document.getElementById('endDateFilter').value;
             const categoryValue = document.getElementById('categoryFilter').value;
 
-            const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-            const yearLabel = yearValue === 'all' ? 'All Years' : yearValue;
-            const monthLabel = monthValue === 'all' ? 'All Months' : monthNames[parseInt(monthValue)];
+            const startLabel = startDateValue ? new Date(`${startDateValue}T00:00:00`).toLocaleDateString() : 'All dates';
+            const endLabel = endDateValue ? new Date(`${endDateValue}T00:00:00`).toLocaleDateString() : 'All dates';
             const categoryLabel = categoryValue === 'all' ? 'All Categories' : procedures[categoryValue]?.name || categoryValue;
 
-            const filteredGenerated = filterAnalyticsTickets(state.generatedTickets, yearValue, monthValue, categoryValue, 'createdAt');
-            const filteredCompleted = filterAnalyticsTickets(state.completed, yearValue, monthValue, categoryValue, 'completedAt');
+            const filteredGenerated = filterAnalyticsTickets(state.generatedTickets, startDateValue, endDateValue, categoryValue, 'createdAt');
+            const filteredCompleted = filterAnalyticsTickets(state.completed, startDateValue, endDateValue, categoryValue, 'completedAt');
 
             const generatedCounts = getProcedureCounts(filteredGenerated);
             const busiestEntry = Object.entries(generatedCounts).sort((a, b) => b[1] - a[1]).find(e => e[1] > 0);
@@ -783,8 +1125,8 @@
                 [],
                 ['Generated On:', new Date().toLocaleString()],
                 ['Filters Applied:'],
-                ['  Year:', yearLabel],
-                ['  Month:', monthLabel],
+                ['  From:', startLabel],
+                ['  To:', endLabel],
                 ['  Category:', categoryLabel],
                 [],
                 ['KEY METRICS'],
