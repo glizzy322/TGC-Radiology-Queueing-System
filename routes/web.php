@@ -14,6 +14,7 @@ $router->post('/api/tickets', [\App\Controllers\TicketController::class, 'store'
 $router->get('/api/queue', [\App\Controllers\QueueController::class, 'state']);
 $router->post('/api/queue/call', [\App\Controllers\QueueController::class, 'call']);
 $router->post('/api/queue/complete', [\App\Controllers\QueueController::class, 'complete']);
+$router->get('/api/reports/tickets', [\App\Controllers\ReportController::class, 'tickets']);
 $router->get('/login', [\App\Controllers\AuthController::class, 'showLogin']);
 $router->post('/login', [\App\Controllers\AuthController::class, 'processLogin']);
 $router->post('/logout', [\App\Controllers\AuthController::class, 'logout']);
