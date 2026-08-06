@@ -2103,3 +2103,110 @@ a {
 .rqs-empty-mini { font-size: 12.5px; color: var(--muted); padding: 14px; text-align: center; border: 1px dashed var(--line); border-radius: 9px; }
 
 .category-badge { font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 4px; background: #eef2f0; color: var(--muted); }
+/* Custom Confirm Modal */
+.custom-confirm-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+}
+.custom-confirm-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+.custom-confirm-box {
+    background: #fff;
+    width: 90%;
+    max-width: 380px;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    overflow: hidden;
+    transform: translateY(20px);
+    transition: transform 0.2s ease;
+}
+.custom-confirm-overlay.active .custom-confirm-box {
+    transform: translateY(0);
+}
+.custom-confirm-header {
+    background: var(--maroon);
+    color: #fff;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.custom-confirm-header svg {
+    color: var(--green-soft);
+}
+.custom-confirm-header h4 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+}
+.custom-confirm-body {
+    padding: 24px 20px;
+    font-size: 14.5px;
+    color: var(--text);
+    line-height: 1.5;
+}
+.custom-confirm-footer {
+    padding: 16px 20px;
+    background: #f8f9fa;
+    border-top: 1px solid var(--line);
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+.custom-confirm-footer button {
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+}
+.custom-confirm-footer .btn-cancel {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid #d1d5db;
+}
+.custom-confirm-footer .btn-cancel:hover {
+    background: #e5e7eb;
+    color: var(--text);
+}
+.custom-confirm-footer .btn-confirm {
+    background: var(--maroon);
+    color: #fff;
+}
+.custom-confirm-footer .btn-confirm:hover {
+    background: #7a1527;
+}
+/* Enhanced Delete Ad Button */
+.ads-icon-btn.btn-delete-ad {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    color: #94a3b8;
+    background: transparent;
+    border: 1px solid transparent;
+}
+.ads-icon-btn.btn-delete-ad:hover {
+    color: #ef4444;
+    background: #fef2f2;
+    border-color: #fecaca;
+    transform: scale(1.05);
+}
+.ads-icon-btn.btn-delete-ad svg {
+    width: 16px;
+    height: 16px;
+}

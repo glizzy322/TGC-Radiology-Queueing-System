@@ -4,7 +4,7 @@ INSERT INTO staff_users (name, role, password) VALUES ('System Admin', 'administ
 -- Seed Procedures
 INSERT INTO procedures (code, name) VALUES 
 ('XRAY', 'X-Ray'),
-('US', 'Ultrasound'),
+('UT', 'Ultrasound'),
 ('CT', 'CT Scan');
 
 -- Seed Patient Categories (IPD has higher priority than OPD)

@@ -90,8 +90,8 @@
         <h1>Choose the view you need</h1>
         <p>Open the receptionist or admin panel to manage queues, or open the public display to show current status to patients.</p>
         <div class="actions">
-            <a class="btn primary" href="/receptionist.php">Receptionist / Admin Page</a>
-            <a class="btn secondary" href="/public-display.php" target="_blank" rel="noopener noreferrer">Open Public Display</a>
+            <a class="btn primary" href="/login">Receptionist / Admin Page</a>
+            <a class="btn secondary" href="/public-display" target="_blank" rel="noopener noreferrer">Open Public Display</a>
         </div>
     </main>
 </body>

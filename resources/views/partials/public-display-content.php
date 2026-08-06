@@ -117,12 +117,13 @@ $pageData = $pageData ?? include __DIR__ . '/../data/public-display-data.php';
         let publicAdTimer = null;
         let publicAdsSignature = '';
         const procedures = {
-            xray: { title: 'X-RAY', spokenName: 'X-Ray', codeClass: 'XR' },
-            ultrasound: { title: 'Ultrasound', spokenName: 'Ultrasound', codeClass: 'UT' },
-            ctscan: { title: 'CT-Scan', spokenName: 'CT Scan', codeClass: 'CT' }
+            xray: { title: 'X-RAY', spokenName: 'X-Ray', codeClass: 'XR', maxServing: 2 },
+            ultrasound: { title: 'Ultrasound', spokenName: 'Ultrasound', codeClass: 'UT', maxServing: 2 },
+            ctscan: { title: 'CT-Scan', spokenName: 'CT Scan', codeClass: 'CT', maxServing: 1 }
         };
         let audioEnabled = true;
         let lastServingIds = {};
+        let isInitialLoad = true;
 
         async function fetchQueueState() {
             try {
@@ -130,6 +131,17 @@ $pageData = $pageData ?? include __DIR__ . '/../data/public-display-data.php';
                 const result = await response.json();
                 if (result.status === 'success') {
                     const data = result.data;
+                    Object.keys(procedures).forEach((key) => {
+                        const maxSlots = procedures[key].maxServing || 1;
+                        const slotArray = Array(maxSlots).fill(null);
+                        (data.serving[key] || []).forEach((t) => {
+                            const slot = t.servingSlot != null ? t.servingSlot : 0;
+                            if (slot < maxSlots) {
+                                slotArray[slot] = t;
+                            }
+                        });
+                        data.serving[key] = slotArray;
+                    });
                     return data;
                 }
                 return {};
@@ -186,7 +198,15 @@ $pageData = $pageData ?? include __DIR__ . '/../data/public-display-data.php';
             try {
                 const ads = await fetchAds();
                 const activeAds = ads.filter(ad => ad.active);
-                if (!activeAds.length) return;
+                const container = document.querySelector('.slideshow-container');
+                if (!activeAds.length) {
+                    if (container) {
+                        container.innerHTML = '<div class="empty-ad-placeholder" style="display:flex;align-items:center;justify-content:center;height:100%;color:#888;font-size:1.5rem;background:#f5f5f5;">No announcements</div>';
+                    }
+                    publicAdsSignature = '';
+                    clearTimeout(publicAdTimer);
+                    return;
+                }
                 const signature = activeAds.map((ad) => `${ad.id}:${ad.active}:${ad.duration}`).join('|');
                 if (signature !== publicAdsSignature) {
                     publicAdsSignature = signature;
@@ -288,7 +308,7 @@ $pageData = $pageData ?? include __DIR__ . '/../data/public-display-data.php';
                 const currentIds = tickets.map((ticket) => ticket.id).join('|');
                 const previousIds = lastServingIds[key] || '';
 
-                if (currentIds && currentIds !== previousIds) {
+                if (!isInitialLoad && currentIds && currentIds !== previousIds) {
                     const previousSet = new Set(previousIds ? previousIds.split('|') : []);
                     tickets.forEach((ticket) => {
                         if (!previousSet.has(ticket.id)) {
@@ -314,6 +334,7 @@ $pageData = $pageData ?? include __DIR__ . '/../data/public-display-data.php';
             if (state.queues && state.serving) {
                 renderIncoming(state.queues);
                 renderServing(state.serving, state.completed || []);
+                isInitialLoad = false;
             }
         }
 

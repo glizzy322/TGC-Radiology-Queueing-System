@@ -8,12 +8,7 @@ return [
     ],
     'time' => date('h:i:s A'),
     'announcement' => [
-        'slides' => [
-            '/images/slide1.jpg',
-            '/images/slide2.jpg',
-            '/images/slide3.jpg',
-            '/images/slide4.jpg',
-        ],
+        'slides' => [],
     ],
     'serving' => [
         'title' => 'Now Serving',

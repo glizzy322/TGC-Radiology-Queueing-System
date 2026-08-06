@@ -45,7 +45,7 @@ class ReportRepository
 
         foreach ($tickets as $t) {
             $key = 'xray';
-            if (str_starts_with($t['procedure_code'], 'UT')) $key = 'ultrasound';
+            if (str_starts_with($t['procedure_code'], 'UT') || str_starts_with($t['procedure_code'], 'US')) $key = 'ultrasound';
             if (str_starts_with($t['procedure_code'], 'CT')) $key = 'ctscan';
             
             $formatted = [

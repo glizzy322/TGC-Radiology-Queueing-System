@@ -22,7 +22,7 @@ class QueueRepository
             JOIN procedures p ON t.procedure_id = p.id
             JOIN patient_categories c ON t.category_id = c.id
             WHERE DATE(t.created_at) = ?
-            ORDER BY t.created_at ASC
+            ORDER BY c.priority_rank ASC, t.created_at ASC
         ");
         $stmt->execute([$today]);
         $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -35,7 +35,7 @@ class QueueRepository
 
         foreach ($tickets as $t) {
             $key = 'xray';
-            if (str_starts_with($t['procedure_code'], 'UT')) $key = 'ultrasound';
+            if (str_starts_with($t['procedure_code'], 'US') || str_starts_with($t['procedure_code'], 'UT')) $key = 'ultrasound';
             if (str_starts_with($t['procedure_code'], 'CT')) $key = 'ctscan';
             
             $formatted = [
@@ -43,6 +43,7 @@ class QueueRepository
                 'procedureKey' => $key,
                 'patientType' => $t['patient_type'],
                 'status' => $t['status'],
+                'servingSlot' => isset($t['serving_slot']) ? (int)$t['serving_slot'] : null,
                 'createdAt' => $t['created_at'],
                 'calledAt' => $t['serving_time'],
                 'completedAt' => $t['completed_time']
@@ -60,7 +61,7 @@ class QueueRepository
         return $state;
     }
 
-    public function callNext(string $procedureKey, int $staffId): ?array
+    public function callNext(string $procedureKey, int $staffId, int $slotIndex = 0): ?array
     {
         $this->db->beginTransaction();
         try {
@@ -68,13 +69,14 @@ class QueueRepository
             $prefix = $procedureKey === 'xray' ? 'XR' : ($procedureKey === 'ultrasound' ? 'UT' : 'CT');
             $today = date('Y-m-d');
             
-            // Find oldest waiting ticket
+            // Find oldest waiting ticket with highest priority
             $stmt = $this->db->prepare("
                 SELECT t.id, t.ticket_code 
                 FROM queue_tickets t
                 JOIN procedures p ON t.procedure_id = p.id
+                JOIN patient_categories c ON t.category_id = c.id
                 WHERE p.code LIKE ? AND t.status = 'waiting' AND DATE(t.created_at) = ?
-                ORDER BY t.created_at ASC 
+                ORDER BY c.priority_rank ASC, t.created_at ASC 
                 LIMIT 1 FOR UPDATE
             ");
             $stmt->execute(["$prefix%", $today]);
@@ -86,8 +88,8 @@ class QueueRepository
             }
 
             // Update ticket
-            $update = $this->db->prepare("UPDATE queue_tickets SET status = 'serving', serving_time = CURRENT_TIMESTAMP WHERE id = ?");
-            $update->execute([$ticket['id']]);
+            $update = $this->db->prepare("UPDATE queue_tickets SET status = 'serving', serving_slot = ?, serving_time = CURRENT_TIMESTAMP WHERE id = ?");
+            $update->execute([$slotIndex, $ticket['id']]);
 
             // Add event
             $event = $this->db->prepare("INSERT INTO queue_events (ticket_id, actor_id, action) VALUES (?, ?, 'called')");

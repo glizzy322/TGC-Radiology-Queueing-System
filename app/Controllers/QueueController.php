@@ -17,10 +17,13 @@ class QueueController
         }
     }
 
-    private function requireRole(string $role)
+    private function requireRole(string|array $roles)
     {
         if (session_status() === PHP_SESSION_NONE) session_start();
-        if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== $role) {
+        $userRole = $_SESSION['user_role'] ?? '';
+        if ($userRole === 'administrator') return; // admin = god mode
+        $allowed = is_array($roles) ? $roles : [$roles];
+        if (!in_array($userRole, $allowed, true)) {
             http_response_code(403);
             header('Content-Type: application/json');
             echo json_encode(['error' => 'Unauthorized']);
@@ -35,6 +38,7 @@ class QueueController
         
         $input = json_decode(file_get_contents('php://input'), true);
         $procedureKey = $input['procedure_key'] ?? '';
+        $slotIndex = $input['slot_index'] ?? 0;
 
         if (!$procedureKey) {
             http_response_code(400);
@@ -44,7 +48,7 @@ class QueueController
 
         try {
             $repo = new QueueRepository();
-            $ticket = $repo->callNext($procedureKey, $_SESSION['user_id']);
+            $ticket = $repo->callNext($procedureKey, $_SESSION['user_id'], $slotIndex);
             if ($ticket) {
                 echo json_encode(['status' => 'success', 'ticket' => $ticket]);
             } else {

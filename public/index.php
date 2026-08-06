@@ -12,14 +12,18 @@ $requestUri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 
 // If the app is not served from the root domain, remove the base path
 $scriptName = dirname($_SERVER['SCRIPT_NAME']); // e.g. /TGC-Radiology-Queueing-System/public
-// Check if the requestURI starts with the script directory
-if ($scriptName !== '/' && $scriptName !== '\\' && strpos($requestUri, $scriptName) === 0) {
+// Check if the requestURI starts with the script directory exactly
+if ($scriptName !== '/' && $scriptName !== '\\' && strpos($requestUri, $scriptName . '/') === 0) {
     $requestUri = substr($requestUri, strlen($scriptName));
+} elseif ($scriptName !== '/' && $scriptName !== '\\' && $requestUri === $scriptName) {
+    $requestUri = '/';
 } else {
-    // Check if the root directory of the project is in the URI (e.g. they didn't include /public in the URL but .htaccess rewrote it)
+    // Check if the root directory of the project is in the URI
     $projectDir = dirname($scriptName); // e.g. /TGC-Radiology-Queueing-System
-    if ($projectDir !== '/' && $projectDir !== '\\' && strpos($requestUri, $projectDir) === 0) {
+    if ($projectDir !== '/' && $projectDir !== '\\' && strpos($requestUri, $projectDir . '/') === 0) {
         $requestUri = substr($requestUri, strlen($projectDir));
+    } elseif ($projectDir !== '/' && $projectDir !== '\\' && $requestUri === $projectDir) {
+        $requestUri = '/';
     }
 }
 

@@ -11,18 +11,35 @@
             align-items: center;
             justify-content: center;
             height: 100vh;
-            background-color: var(--bg-main);
-            font-family: system-ui, -apple-system, sans-serif;
             margin: 0;
+            font-family: system-ui, -apple-system, sans-serif;
+            position: relative;
+            overflow: hidden;
+        }
+        body::before {
+            content: '';
+            position: absolute;
+            top: -20px;
+            left: -20px;
+            right: -20px;
+            bottom: -20px;
+            background-image: linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.4)), url('/images/TGMCI LOGO.jpg');
+            background-size: cover;
+            background-position: center;
+            filter: blur(8px);
+            z-index: -1;
         }
         .login-card {
-            background: #ffffff;
-            padding: 40px;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            padding: 40px 40px 50px;
+            border-radius: 16px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.3);
             width: 100%;
-            max-width: 400px;
+            max-width: 380px;
             text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.6);
         }
         .login-card h1 {
             font-size: 24px;

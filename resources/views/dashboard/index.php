@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reception | Radiology QMS</title>
-    <link rel="stylesheet" href="/css/receptionist.css">
+    <link rel="stylesheet" href="/css/receptionist.css?v=2">
     <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
@@ -15,41 +15,54 @@
             </div>
 
             <nav class="rqs-nav" aria-label="Main">
+                <?php if ($userRole !== 'radiology_staff'): ?>
                 <button class="rqs-nav-item active nav-item" data-view="dashboard" type="button">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg> Dashboard
                 </button>
-                <?php if ($userRole === 'receptionist'): ?>
+                <?php endif; ?>
+                <?php if ($userRole === 'receptionist' || $userRole === 'administrator'): ?>
                 <button class="rqs-nav-item nav-item" data-view="reception" type="button">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg> Reception
                 </button>
                 <?php endif; ?>
-                <?php if ($userRole === 'radiology_staff'): ?>
-                <button class="rqs-nav-item nav-item" data-view="manage" type="button">
+                <?php if ($userRole === 'radiology_staff' || $userRole === 'administrator'): ?>
+                <button class="rqs-nav-item <?= $userRole === 'radiology_staff' ? 'active' : '' ?> nav-item" data-view="manage" type="button">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><line x1="10" x2="21" y1="6" y2="6"/><line x1="10" x2="21" y1="12" y2="12"/><line x1="10" x2="21" y1="18" y2="18"/><path d="M4 6h1v4"/><path d="M4 10h2"/><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"/></svg> Manage queue
                 </button>
                 <?php endif; ?>
+                <?php if ($userRole !== 'radiology_staff'): ?>
                 <button class="rqs-nav-item nav-item" data-view="ads" type="button">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><rect width="18" height="14" x="3" y="5" rx="2"/><circle cx="8" cy="10" r="1.4"/><path d="m21 15-5-5L5 21"/></svg> Ads
                 </button>
+                <?php endif; ?>
+            </nav>
+            <div style="flex-grow: 1;"></div>
+            <nav class="rqs-nav" style="margin-bottom: 12px;" aria-label="Account">
+                <button class="rqs-nav-item nav-item" data-view="account" type="button">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Account & Logout
+                </button>
             </nav>
 
+            <?php if ($userRole !== 'radiology_staff'): ?>
             <div class="rqs-sidebar-foot">
-                <a class="rqs-mode-btn display-link" href="/public-display.php" target="_blank" rel="noopener">
+                <a class="rqs-mode-btn display-link" href="/public-display" target="_blank" rel="noopener">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg> Open public display
                 </a>
             </div>
+            <?php endif; ?>
         </aside>
 
         <main class="workspace">
             <header class="page-header">
                 <p>RADIOLOGY QUEUE MANAGEMENT SYSTEM</p>
-                <h1 id="pageTitle">Dashboard</h1>
+                <h1 id="pageTitle"><?= $userRole === 'radiology_staff' ? 'Manage queue' : 'Dashboard' ?></h1>
                 <div class="header-clock" aria-hidden="false">
                     <div id="headerDate" class="header-date-text">--</div>
                     <div id="headerTime" class="header-time-text">--:--:--</div>
                 </div>
             </header>
 
+            <?php if ($userRole !== 'radiology_staff'): ?>
             <section class="view active" id="dashboardView" aria-labelledby="dashboardTitle">
                 <h2 id="dashboardTitle" class="sr-only">Dashboard</h2>
                 <div class="analytics-dashboard">
@@ -158,8 +171,9 @@
                     </div>
                 </div>
             </section>
+            <?php endif; ?>
 
-            <?php if ($userRole === 'receptionist'): ?>
+            <?php if ($userRole === 'receptionist' || $userRole === 'administrator'): ?>
             <section class="view" id="receptionView" aria-labelledby="receptionTitle">
                 <h2 id="receptionTitle" class="sr-only">Reception</h2>
                     <div class="reception-layout">
@@ -208,13 +222,14 @@
             </section>
             <?php endif; ?>
 
-            <?php if ($userRole === 'radiology_staff'): ?>
-            <section class="view" id="manageView" aria-labelledby="manageTitle">
+            <?php if ($userRole === 'radiology_staff' || $userRole === 'administrator'): ?>
+            <section class="view <?= $userRole === 'radiology_staff' ? 'active' : '' ?>" id="manageView" aria-labelledby="manageTitle">
                 <h2 id="manageTitle" class="sr-only">Manage queue</h2>
                 <div class="manage-grid" id="manageGrid"></div>
             </section>
             <?php endif; ?>
 
+            <?php if ($userRole !== 'radiology_staff'): ?>
             <section class="view" id="adsView" aria-labelledby="adsTitle">
                 <h2 id="adsTitle" class="sr-only">Ads</h2>
                 <div class="ads-dashboard">
@@ -270,6 +285,7 @@
                     </section>
                 </div>
             </section>
+            <?php endif; ?>
 
             <section class="view" id="accountView" aria-labelledby="accountTitle">
                 <h2 id="accountTitle" class="sr-only">Account</h2>
@@ -279,14 +295,55 @@
                         <h3><?= htmlspecialchars($userName) ?></h3>
                     </div>
                     <form method="POST" action="/logout" style="margin-top: 16px;">
-                        <button type="submit" class="secondary-action">Sign Out</button>
+                            <button type="submit" class="secondary-action">Sign Out</button>
                     </form>
                 </section>
             </section>
         </main>
+        <div class="custom-confirm-overlay" id="customConfirmOverlay">
+            <div class="custom-confirm-box">
+                <div class="custom-confirm-header">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                    <h4>Confirmation Required</h4>
+                </div>
+                <div class="custom-confirm-body" id="customConfirmMessage">
+                    Are you sure you want to proceed?
+                </div>
+                <div class="custom-confirm-footer">
+                    <button class="btn-cancel" id="customConfirmCancel">Cancel</button>
+                    <button class="btn-confirm" id="customConfirmOk">Yes, Proceed</button>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <script>
+        // Custom Confirm Logic
+        function showConfirm(message, callback) {
+            const overlay = document.getElementById('customConfirmOverlay');
+            const msgEl = document.getElementById('customConfirmMessage');
+            const btnCancel = document.getElementById('customConfirmCancel');
+            const btnOk = document.getElementById('customConfirmOk');
+
+            msgEl.textContent = message;
+            overlay.classList.add('active');
+
+            const cleanup = () => {
+                overlay.classList.remove('active');
+                btnCancel.removeEventListener('click', onCancel);
+                btnOk.removeEventListener('click', onOk);
+            };
+
+            const onCancel = () => { cleanup(); callback(false); };
+            const onOk = () => { cleanup(); callback(true); };
+
+            btnCancel.addEventListener('click', onCancel);
+            btnOk.addEventListener('click', onOk);
+        }
+
+        const currentUserName = <?= json_encode($userName ?? '') ?>;
+        const currentRole = <?= json_encode($userRole ?? '') ?>;
         const procedures = {
             xray: { name: 'X-Ray', shortName: 'X-RAY', chartLabel: 'Xray', prefix: 'XR', maxServing: 2 },
             ultrasound: { name: 'Ultrasound', shortName: 'UTZ', chartLabel: 'Utz', prefix: 'UT', maxServing: 2 },
@@ -349,8 +406,9 @@
             renderAdsPreview();
         }
 
-        async function deleteAd(id) {
-            if (!confirm('Are you sure you want to delete this ad?')) return;
+        function deleteAd(id) {
+            showConfirm('Are you sure you want to delete this advertisement?', async (confirmed) => {
+                if (!confirmed) return;
             try {
                 const response = await fetch('/api/ads/delete', {
                     method: 'POST',
@@ -367,6 +425,7 @@
                 console.error(err);
                 alert('Failed to connect to server.');
             }
+            });
         }
 
         function readFileAsDataUrl(file) {
@@ -430,8 +489,11 @@
                         const fetchedServing = data.serving[key].map(parseTicketDates);
                         const maxSlots = procedures[key].maxServing || 1;
                         state.serving[key] = Array(maxSlots).fill(null);
-                        fetchedServing.slice(0, maxSlots).forEach((t, i) => {
-                            state.serving[key][i] = t;
+                        fetchedServing.forEach((t) => {
+                            const slot = t.servingSlot != null ? t.servingSlot : 0;
+                            if (slot < maxSlots) {
+                                state.serving[key][slot] = t;
+                            }
                         });
                     });
 
@@ -510,8 +572,9 @@
             });
         });
 
-        generateButton.addEventListener('click', async () => {
-            if (!state.selectedProcedure || !state.selectedPatient) return;
+        if (generateButton) {
+            generateButton.addEventListener('click', async () => {
+                if (!state.selectedProcedure || !state.selectedPatient) return;
 
             const procBtn = document.querySelector(`[data-procedure="${state.selectedProcedure}"]`);
             const catBtn = document.querySelector(`[data-patient="${state.selectedPatient}"]`);
@@ -547,6 +610,7 @@
                     
                     formNote.textContent = `${t.id} added to ${t.procedure}.`;
                     fetchQueueState();
+                    printTicket(t);
                 } else {
                     alert('Error generating ticket: ' + (result.error || 'Unknown error'));
                 }
@@ -558,6 +622,122 @@
                 generateButton.textContent = 'Generate queue number';
             }
         });
+        }
+
+        function printTicket(ticket) {
+            const now = ticket.createdAt || new Date();
+            const dateStr = now.toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' });
+            const timeStr = now.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' });
+
+            const printWindow = window.open('', '_blank', 'width=350,height=500');
+            if (!printWindow) return;
+
+            printWindow.document.write(`<!DOCTYPE html>
+<html>
+<head>
+<title>Queue Ticket - ${ticket.id}</title>
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+        font-family: 'Inter', Arial, sans-serif;
+        width: 280px;
+        margin: 0 auto;
+        padding: 20px 10px;
+        text-align: center;
+        color: #1a1a1a;
+    }
+    .hospital-name {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        color: #555;
+        margin-bottom: 2px;
+    }
+    .dept-name {
+        font-size: 10px;
+        color: #888;
+        margin-bottom: 12px;
+    }
+    .divider {
+        border: none;
+        border-top: 1px dashed #ccc;
+        margin: 10px 0;
+    }
+    .label {
+        font-size: 9px;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        color: #999;
+        margin-bottom: 4px;
+    }
+    .ticket-number {
+        font-size: 48px;
+        font-weight: 800;
+        letter-spacing: 2px;
+        margin: 8px 0;
+        line-height: 1;
+    }
+    .procedure-name {
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 4px;
+    }
+    .patient-type {
+        display: inline-block;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 3px 12px;
+        border-radius: 10px;
+        background: ${ticket.patientType === 'IPD' ? '#f3e0e4' : '#e0f0e8'};
+        color: ${ticket.patientType === 'IPD' ? '#921d31' : '#2d6a4f'};
+        margin-bottom: 12px;
+    }
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 10px;
+        color: #666;
+        padding: 3px 8px;
+    }
+    .footer {
+        margin-top: 14px;
+        font-size: 9px;
+        color: #aaa;
+        line-height: 1.4;
+    }
+    @media print {
+        body { width: 100%; padding: 10px 5px; }
+        @page { size: 80mm auto; margin: 0; }
+    }
+</style>
+</head>
+<body>
+    <div class="hospital-name">The Good Clinic</div>
+    <div class="dept-name">Radiology Department</div>
+    <hr class="divider">
+    <div class="label">Queue Number</div>
+    <div class="ticket-number">${ticket.id}</div>
+    <div class="procedure-name">${ticket.procedure}</div>
+    <div class="patient-type">${ticket.patientType === 'IPD' ? 'In-Patient (IPD)' : 'Out-Patient (OPD)'}</div>
+    <hr class="divider">
+    <div class="info-row"><span>Date</span><span>${dateStr}</span></div>
+    <div class="info-row"><span>Time</span><span>${timeStr}</span></div>
+    <hr class="divider">
+    <div class="footer">
+        Please wait for your number to be called.<br>
+        Thank you for your patience.
+    </div>
+</body>
+</html>`);
+            printWindow.document.close();
+            printWindow.focus();
+            setTimeout(() => {
+                printWindow.print();
+                printWindow.close();
+            }, 400);
+        }
 
         function updateGenerateState() {
             const ready = state.selectedProcedure && state.selectedPatient;
@@ -567,12 +747,12 @@
                 : 'Select a procedure and patient category to continue.';
         }
 
-        async function callNext(key, slotIndex = null) {
+        async function callNext(key, slotIndex = 0) {
             try {
                 const response = await fetch('/api/queue/call', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ procedure_key: key })
+                    body: JSON.stringify({ procedure_key: key, slot_index: slotIndex })
                 });
                 const result = await response.json();
                 if (result.status === 'success') {
@@ -627,6 +807,8 @@
 
         function renderLatestTicket() {
             const latestTicket = document.getElementById('latestTicket');
+            if (!latestTicket) return; // Radiology staff doesn't have this UI element
+
             if (!state.latestTicket) {
                 ['xray','ultrasound','ctscan'].forEach(k => latestTicket.classList.remove('proc-' + k));
                 latestTicket.innerHTML = '<p>No ticket generated yet this session.</p>';
@@ -648,6 +830,8 @@
 
         function renderManageQueue() {
             const manageGrid = document.getElementById('manageGrid');
+            if (!manageGrid) return;
+            
             manageGrid.innerHTML = Object.entries(procedures).map(([key, procedure]) => {
                 const servingList = state.serving[key];
                 const waiting = state.queues[key];
@@ -659,6 +843,21 @@
                     const slotLabel = key === 'xray'
                         ? `Xray ${slotIndex + 1}`
                         : `${procedure.name}${maxSlots > 1 ? ` ${slotIndex + 1}` : ''}`;
+
+                    const isRoomRestricted = (() => {
+                        const roomMap = {
+                            'X-Ray 1': { key: 'xray', slot: 0 },
+                            'X-Ray 2': { key: 'xray', slot: 1 },
+                            'Ultrasound 1': { key: 'ultrasound', slot: 0 },
+                            'Ultrasound 2': { key: 'ultrasound', slot: 1 },
+                            'CT Scan': { key: 'ctscan', slot: 0 }
+                        };
+                        if (roomMap[currentUserName]) {
+                            const allowed = roomMap[currentUserName];
+                            return allowed.key !== key || allowed.slot !== slotIndex;
+                        }
+                        return false;
+                    })();
 
                     return `
                         <div class="rqs-serving-slot" id="${key}-${slotIndex + 1}">
@@ -673,10 +872,10 @@
                                 `}
                             </div>
                             <div class="rqs-action-row">
-                                <button class="secondary-action" type="button" ${ticket ? '' : 'disabled'} onclick="completePatient('${key}', ${slotIndex})">
+                                <button class="secondary-action" type="button" ${ticket && !isRoomRestricted ? '' : 'disabled'} onclick="completePatient('${key}', ${slotIndex})">
                                     <span class="check-icon"></span> Complete
                                 </button>
-                                <button class="primary-action small" type="button" ${ticket || waiting.length === 0 ? 'disabled' : ''} onclick="callNext('${key}', ${slotIndex})">
+                                <button class="primary-action small" type="button" ${(!ticket && waiting.length > 0 && !isRoomRestricted) ? '' : 'disabled'} onclick="callNext('${key}', ${slotIndex})">
                                     <span class="call-icon"></span> Call next
                                 </button>
                             </div>
@@ -715,7 +914,10 @@
         }
 
         function renderDashboard() {
-            const startDateValue = document.getElementById('startDateFilter').value;
+            const startDateFilter = document.getElementById('startDateFilter');
+            if (!startDateFilter) return;
+
+            const startDateValue = startDateFilter.value;
             const endDateValue = document.getElementById('endDateFilter').value;
             const categoryValue = document.getElementById('categoryFilter').value;
             const filteredGeneratedTickets = filterAnalyticsTickets(state.generatedTickets, null, null, categoryValue, 'createdAt');
@@ -955,7 +1157,14 @@
                             <strong>${escapeHtml(ad.name)}</strong>
                             <small>${ad.duration}s on screen</small>
                         </div>
-                        <button class="ads-icon-btn" type="button" onclick="deleteAd(${ad.id})" aria-label="Delete ad">⌫</button>
+                        <button class="ads-icon-btn btn-delete-ad" type="button" onclick="deleteAd(${ad.id})" aria-label="Delete ad" title="Remove Advertisement">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                <line x1="10" y1="11" x2="10" y2="17"></line>
+                                <line x1="14" y1="11" x2="14" y2="17"></line>
+                            </svg>
+                        </button>
                     </div>
                 `;
             }).join('');
@@ -1023,68 +1232,74 @@
             }
         }
 
-        document.getElementById('startDateFilter').addEventListener('change', function() {
-            fetchHistoricalTickets(this.value, document.getElementById('endDateFilter').value);
-            syncDateShortcutState();
-        });
-        document.getElementById('endDateFilter').addEventListener('change', function() {
-            fetchHistoricalTickets(document.getElementById('startDateFilter').value, this.value);
-            syncDateShortcutState();
-        });
-        document.getElementById('categoryFilter').addEventListener('change', renderDashboard);
-        document.getElementById('downloadExcelBtn').addEventListener('click', downloadExcelReport);
-        document.querySelectorAll('[data-range]').forEach((button) => {
-            button.addEventListener('click', () => applyDateShortcut(button.dataset.range));
-        });
-        document.getElementById('showAdFormBtn').addEventListener('click', () => {
-            document.getElementById('adForm').hidden = false;
-        });
-        document.getElementById('cancelAdFormBtn').addEventListener('click', resetAdForm);
-        document.getElementById('cancelAdFormBtn2').addEventListener('click', resetAdForm);
-        document.getElementById('adFileInput').addEventListener('change', async (event) => {
-            selectedAdFile = event.target.files[0] || null;
-            selectedAdDataUrl = selectedAdFile ? await readFileAsDataUrl(selectedAdFile) : '';
-            document.getElementById('adFileNote').textContent = selectedAdFile
-                ? selectedAdFile.name
-                : 'No file selected.';
-        });
-        document.getElementById('adForm').addEventListener('submit', async (event) => {
-            event.preventDefault();
-            if (!selectedAdFile) {
-                alert('Please choose an image or video first.');
-                return;
-            }
-
-            const submitBtn = event.target.querySelector('button[type="submit"]');
-            const originalText = submitBtn.textContent;
-            submitBtn.textContent = 'Uploading...';
-            submitBtn.disabled = true;
-
-            const formData = new FormData();
-            formData.append('media', selectedAdFile);
-            formData.append('duration', Math.max(3, Math.min(60, Number(document.getElementById('adDurationInput').value) || 8)));
-            formData.append('active', document.getElementById('adActiveInput').checked);
-
-            try {
-                const response = await fetch('/api/ads', {
-                    method: 'POST',
-                    body: formData
-                });
-                const result = await response.json();
-                if (result.status === 'success') {
-                    resetAdForm();
-                    await loadAds();
-                } else {
-                    alert('Upload failed: ' + (result.error || 'Unknown error'));
+        const startDateFilter = document.getElementById('startDateFilter');
+        if (startDateFilter) {
+            startDateFilter.addEventListener('change', function() {
+                fetchHistoricalTickets(this.value, document.getElementById('endDateFilter').value);
+                syncDateShortcutState();
+            });
+            document.getElementById('endDateFilter').addEventListener('change', function() {
+                fetchHistoricalTickets(document.getElementById('startDateFilter').value, this.value);
+                syncDateShortcutState();
+            });
+            document.getElementById('categoryFilter').addEventListener('change', renderDashboard);
+            document.getElementById('downloadExcelBtn').addEventListener('click', downloadExcelReport);
+            document.querySelectorAll('[data-range]').forEach((button) => {
+                button.addEventListener('click', () => applyDateShortcut(button.dataset.range));
+            });
+        }
+        const showAdFormBtn = document.getElementById('showAdFormBtn');
+        if (showAdFormBtn) {
+            showAdFormBtn.addEventListener('click', () => {
+                document.getElementById('adForm').hidden = false;
+            });
+            document.getElementById('cancelAdFormBtn').addEventListener('click', resetAdForm);
+            document.getElementById('cancelAdFormBtn2').addEventListener('click', resetAdForm);
+            document.getElementById('adFileInput').addEventListener('change', async (event) => {
+                selectedAdFile = event.target.files[0] || null;
+                selectedAdDataUrl = selectedAdFile ? await readFileAsDataUrl(selectedAdFile) : '';
+                document.getElementById('adFileNote').textContent = selectedAdFile
+                    ? selectedAdFile.name
+                    : 'No file selected.';
+            });
+            document.getElementById('adForm').addEventListener('submit', async (event) => {
+                event.preventDefault();
+                if (!selectedAdFile) {
+                    alert('Please choose an image or video first.');
+                    return;
                 }
-            } catch (err) {
-                console.error(err);
-                alert('Upload failed due to network error.');
-            } finally {
-                submitBtn.textContent = originalText;
-                submitBtn.disabled = false;
-            }
-        });
+
+                const submitBtn = event.target.querySelector('button[type="submit"]');
+                const originalText = submitBtn.textContent;
+                submitBtn.textContent = 'Uploading...';
+                submitBtn.disabled = true;
+
+                const formData = new FormData();
+                formData.append('media', selectedAdFile);
+                formData.append('duration', Math.max(3, Math.min(60, Number(document.getElementById('adDurationInput').value) || 8)));
+                formData.append('active', document.getElementById('adActiveInput').checked);
+
+                try {
+                    const response = await fetch('/api/ads', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const result = await response.json();
+                    if (result.status === 'success') {
+                        resetAdForm();
+                        await loadAds();
+                    } else {
+                        alert('Upload failed: ' + (result.error || 'Unknown error'));
+                    }
+                } catch (err) {
+                    console.error(err);
+                    alert('Upload failed due to network error.');
+                } finally {
+                    submitBtn.textContent = originalText;
+                    submitBtn.disabled = false;
+                }
+            });
+        }
 
         // Header clock: update date and time in the top-right header
         function updateHeaderClock() {
