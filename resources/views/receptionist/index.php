@@ -167,17 +167,18 @@
                                 <div class="field-group">
                                     <p class="light-label">Procedure Category</p>
                                     <div class="choice-row">
-                                        <button class="choice-btn" data-procedure="xray" type="button">X-Ray</button>
-                                        <button class="choice-btn" data-procedure="ultrasound" type="button">Ultrasound</button>
-                                        <button class="choice-btn" data-procedure="ctscan" type="button">CT Scan</button>
+                                        <?php foreach ($procedures as $proc): ?>
+                                            <button class="choice-btn" data-procedure="<?= $proc['id'] ?>" data-prefix="<?= substr($proc['code'], 0, 2) ?>" data-name="<?= htmlspecialchars($proc['name']) ?>" type="button"><?= htmlspecialchars($proc['name']) ?></button>
+                                        <?php endforeach; ?>
                                     </div>
                                 </div>
 
                                 <div class="field-group">
                                     <p class="light-label">Patient Category</p>
                                     <div class="choice-row">
-                                        <button class="choice-btn" data-patient="IPD" type="button">In-patient <span>(IPD)</span></button>
-                                        <button class="choice-btn" data-patient="OPD" type="button">Out-patient <span>(OPD)</span></button>
+                                        <?php foreach ($categories as $cat): ?>
+                                            <button class="choice-btn" data-patient="<?= $cat['id'] ?>" data-code="<?= $cat['code'] ?>" type="button"><?= $cat['code'] === 'IPD' ? 'In-patient <span>(IPD)</span>' : 'Out-patient <span>(OPD)</span>' ?></button>
+                                        <?php endforeach; ?>
                                     </div>
                                 </div>
                             </section>
@@ -527,25 +528,58 @@
             });
         });
 
-        generateButton.addEventListener('click', () => {
+        generateButton.addEventListener('click', async () => {
             if (!state.selectedProcedure || !state.selectedPatient) return;
 
-            const key = state.selectedProcedure;
-            state.counters[key] += 1;
-            const ticket = {
-                id: `${procedures[key].prefix}${String(state.counters[key]).padStart(3, '0')}`,
-                procedureKey: key,
-                procedure: procedures[key].name,
-                displayProcedure: procedures[key].shortName,
-                patientType: state.selectedPatient,
-                createdAt: new Date()
-            };
+            const procBtn = document.querySelector(`[data-procedure="${state.selectedProcedure}"]`);
+            const catBtn = document.querySelector(`[data-patient="${state.selectedPatient}"]`);
+            
+            generateButton.disabled = true;
+            generateButton.textContent = 'Generating...';
 
-            state.queues[key].push(ticket);
-            state.generatedTickets.push(ticket);
-            state.latestTicket = ticket;
-            formNote.textContent = `${ticket.id} added to ${ticket.procedure}.`;
-            render();
+            try {
+                const response = await fetch('/api/tickets', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        procedure_id: state.selectedProcedure,
+                        procedure_prefix: procBtn.dataset.prefix,
+                        category_id: state.selectedPatient
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    const ticketData = result.ticket;
+                    // Temporarily update local state so the preview UI works immediately
+                    const t = {
+                        id: ticketData.ticket_code,
+                        procedureKey: ticketData.procedure_code.toLowerCase(),
+                        procedure: ticketData.procedure_name,
+                        patientType: ticketData.category_code,
+                        createdAt: new Date(ticketData.created_at)
+                    };
+                    
+                    state.latestTicket = t;
+                    // Push to queues just to keep the old dashboard visually somewhat happy
+                    if (state.queues[t.procedureKey]) {
+                        state.queues[t.procedureKey].push(t);
+                    }
+                    
+                    formNote.textContent = `${t.id} added to ${t.procedure}.`;
+                    renderLatestTicket(); 
+                    renderManageQueue();
+                } else {
+                    alert('Error generating ticket: ' + (result.error || 'Unknown error'));
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Failed to connect to server.');
+            } finally {
+                generateButton.disabled = false;
+                generateButton.textContent = 'Generate queue number';
+            }
         });
 
         function updateGenerateState() {
