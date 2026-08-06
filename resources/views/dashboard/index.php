@@ -457,51 +457,48 @@
                 });
         }
 
-        function loadSavedState() {
+        async function fetchQueueState() {
             try {
-                const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-                if (!saved || typeof saved !== 'object') return;
+                const response = await fetch('/api/queue');
+                const result = await response.json();
+                if (result.status === 'success') {
+                    const data = result.data;
+                    
+                    Object.keys(procedures).forEach((key) => {
+                        state.queues[key] = data.queues[key].map(parseTicketDates);
+                        
+                        const fetchedServing = data.serving[key].map(parseTicketDates);
+                        const maxSlots = procedures[key].maxServing || 1;
+                        state.serving[key] = Array(maxSlots).fill(null);
+                        fetchedServing.slice(0, maxSlots).forEach((t, i) => {
+                            state.serving[key][i] = t;
+                        });
+                    });
 
-                state.latestTicket = saved.latestTicket ? parseTicketDates(saved.latestTicket) : null;
-                state.completed = Array.isArray(saved.completed) ? saved.completed.map(parseTicketDates) : [];
-                state.generatedTickets = Array.isArray(saved.generatedTickets) ? saved.generatedTickets.map(parseTicketDates) : [];
-                state.callSequence = Number(saved.callSequence || 0);
-                state.calledTickets = Array.isArray(saved.calledTickets) ? saved.calledTickets : [];
+                    state.completed = data.completed.map(parseTicketDates);
+                    // Build generated tickets array for analytics
+                    state.generatedTickets = [];
+                    ['xray', 'ultrasound', 'ctscan'].forEach(key => {
+                        state.generatedTickets.push(...state.queues[key]);
+                        state.generatedTickets.push(...state.serving[key].filter(Boolean));
+                    });
+                    state.generatedTickets.push(...state.completed);
 
-                Object.keys(procedures).forEach((key) => {
-                    state.queues[key] = Array.isArray(saved.queues?.[key])
-                        ? saved.queues[key].map(parseTicketDates)
-                        : [];
-                    // Migrate: old format was a single object, new format is an array
-                    const savedServing = saved.serving?.[key];
-                    if (Array.isArray(savedServing)) {
-                        state.serving[key] = normalizeServingSlots(key, savedServing);
-                    } else if (savedServing) {
-                        // Migrate single-object to array
-                        state.serving[key] = normalizeServingSlots(key, [savedServing]);
-                    } else {
-                        state.serving[key] = normalizeServingSlots(key);
-                    }
-                    state.counters[key] = Number(saved.counters?.[key] || 0);
-                });
-                migrateServingCallOrder();
+                    render();
+                }
             } catch (error) {
-                console.warn('Unable to load saved queue state.', error);
+                console.warn('Unable to load live queue state.', error);
             }
         }
 
+        function loadSavedState() {
+            // Replaced by live fetchQueueState polling
+            fetchQueueState();
+            setInterval(fetchQueueState, 2000);
+        }
+
         function saveQueueState() {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify({
-                latestTicket: state.latestTicket,
-                completed: state.completed,
-                generatedTickets: state.generatedTickets,
-                queues: state.queues,
-                serving: state.serving,
-                counters: state.counters,
-                callSequence: state.callSequence,
-                calledTickets: state.calledTickets,
-                updatedAt: new Date().toISOString()
-            }));
+            // Deprecated: Queue state is now managed purely by the backend database
         }
 
         const navItems = document.querySelectorAll('.nav-item');
@@ -571,15 +568,11 @@
                         createdAt: new Date(ticketData.created_at)
                     };
                     
+                    
                     state.latestTicket = t;
-                    // Push to queues just to keep the old dashboard visually somewhat happy
-                    if (state.queues[t.procedureKey]) {
-                        state.queues[t.procedureKey].push(t);
-                    }
                     
                     formNote.textContent = `${t.id} added to ${t.procedure}.`;
-                    renderLatestTicket(); 
-                    renderManageQueue();
+                    fetchQueueState(); // Immediately pull new state
                 } else {
                     alert('Error generating ticket: ' + (result.error || 'Unknown error'));
                 }
@@ -600,37 +593,46 @@
                 : 'Select a procedure and patient category to continue.';
         }
 
-        function callNext(key, slotIndex = null) {
-            const maxSlots = procedures[key].maxServing || 1;
-            const targetSlot = slotIndex === null
-                ? state.serving[key].findIndex((ticket) => !ticket)
-                : Number(slotIndex);
-            if (targetSlot < 0 || targetSlot >= maxSlots || state.serving[key][targetSlot] || state.queues[key].length === 0) return;
-            state.callSequence += 1;
-            const calledTicket = {
-                ...state.queues[key].shift(),
-                calledAt: new Date(),
-                calledOrder: state.callSequence
-            };
-            state.serving[key][targetSlot] = calledTicket;
-            state.calledTickets.push({
-                id: calledTicket.id,
-                procedureKey: key,
-                calledOrder: calledTicket.calledOrder
-            });
-            render();
+        async function callNext(key, slotIndex = null) {
+            try {
+                const response = await fetch('/api/queue/call', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ procedure_key: key })
+                });
+                const result = await response.json();
+                if (result.status === 'success') {
+                    fetchQueueState(); // Refresh UI instantly
+                } else {
+                    alert(result.message || 'Error calling ticket');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Failed to connect to server.');
+            }
         }
 
-        function completePatient(key, slotIndex) {
+        async function completePatient(key, slotIndex) {
             const targetSlot = Number(slotIndex);
             const ticket = state.serving[key][targetSlot];
             if (!ticket) return;
-            state.serving[key][targetSlot] = null;
-            state.completed.push({
-                ...ticket,
-                completedAt: new Date()
-            });
-            render();
+
+            try {
+                const response = await fetch('/api/queue/complete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ticket_code: ticket.id })
+                });
+                const result = await response.json();
+                if (result.status === 'success') {
+                    fetchQueueState(); // Refresh UI instantly
+                } else {
+                    alert(result.message || 'Error completing ticket');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Failed to connect to server.');
+            }
         }
 
         function renderTicket(ticket, compact = false) {
