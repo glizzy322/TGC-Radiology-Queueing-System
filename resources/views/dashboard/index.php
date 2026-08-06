@@ -326,48 +326,47 @@
         let adsPreviewIndex = 0;
         let adsPreviewTimer = null;
 
-        function openAdsDb() {
-            return new Promise((resolve, reject) => {
-                const request = indexedDB.open(ADS_DB_NAME, 1);
-                request.onupgradeneeded = () => {
-                    const db = request.result;
-                    if (!db.objectStoreNames.contains(ADS_STORE_NAME)) {
-                        db.createObjectStore(ADS_STORE_NAME, { keyPath: 'id' });
-                    }
-                };
-                request.onsuccess = () => resolve(request.result);
-                request.onerror = () => reject(request.error);
-            });
+        // ----------------------------------------------------
+        // ADVERTISEMENTS LOGIC (API Integration)
+        // ----------------------------------------------------
+        async function fetchAds() {
+            try {
+                const response = await fetch('/api/ads');
+                const result = await response.json();
+                if (result.status === 'success') {
+                    return result.data;
+                }
+                return [];
+            } catch (err) {
+                console.error('Error fetching ads', err);
+                return [];
+            }
         }
 
-        async function getStoredAds() {
-            const db = await openAdsDb();
-            return new Promise((resolve, reject) => {
-                const tx = db.transaction(ADS_STORE_NAME, 'readonly');
-                const request = tx.objectStore(ADS_STORE_NAME).getAll();
-                request.onsuccess = () => resolve(request.result.sort((a, b) => (a.order || 0) - (b.order || 0)));
-                request.onerror = () => reject(request.error);
-            });
+        async function loadAds() {
+            adLibrary = await fetchAds();
+            renderAdsView();
+            renderAdsPreview();
         }
 
-        async function saveStoredAd(ad) {
-            const db = await openAdsDb();
-            return new Promise((resolve, reject) => {
-                const tx = db.transaction(ADS_STORE_NAME, 'readwrite');
-                tx.objectStore(ADS_STORE_NAME).put(ad);
-                tx.oncomplete = resolve;
-                tx.onerror = () => reject(tx.error);
-            });
-        }
-
-        async function deleteStoredAd(id) {
-            const db = await openAdsDb();
-            return new Promise((resolve, reject) => {
-                const tx = db.transaction(ADS_STORE_NAME, 'readwrite');
-                tx.objectStore(ADS_STORE_NAME).delete(id);
-                tx.oncomplete = resolve;
-                tx.onerror = () => reject(tx.error);
-            });
+        async function deleteAd(id) {
+            if (!confirm('Are you sure you want to delete this ad?')) return;
+            try {
+                const response = await fetch('/api/ads/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id })
+                });
+                const result = await response.json();
+                if (result.status === 'success') {
+                    loadAds();
+                } else {
+                    alert('Error deleting ad: ' + (result.error || 'Unknown error'));
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Failed to connect to server.');
+            }
         }
 
         function readFileAsDataUrl(file) {
@@ -418,45 +417,6 @@
             return match ? Number(match[0]) : Number.MAX_SAFE_INTEGER;
         }
 
-        function migrateServingCallOrder() {
-            const allServingTickets = Object.values(state.serving).flat().filter(Boolean);
-            state.callSequence = Math.max(
-                Number(state.callSequence || 0),
-                ...allServingTickets.map((ticket) => Number(ticket.calledOrder || 0)),
-                ...state.calledTickets.map((ticket) => Number(ticket.calledOrder || 0))
-            );
-
-            // Collect all serving tickets that need calledOrder, with their keys
-            const needsOrder = [];
-            Object.entries(state.serving).forEach(([key, tickets]) => {
-                tickets.forEach((ticket, idx) => {
-                    if (ticket && !ticket.calledOrder) {
-                        needsOrder.push({ key, idx, ticket });
-                    }
-                });
-            });
-
-            needsOrder
-                .sort((a, b) => {
-                    const aTime = a.ticket.calledAt ? a.ticket.calledAt.getTime() : 0;
-                    const bTime = b.ticket.calledAt ? b.ticket.calledAt.getTime() : 0;
-                    if (aTime && bTime && aTime !== bTime) return aTime - bTime;
-                    return getTicketNumberValue(a.ticket) - getTicketNumberValue(b.ticket);
-                })
-                .forEach((item) => {
-                    state.callSequence += 1;
-                    item.ticket.calledOrder = state.callSequence;
-                    if (!item.ticket.calledAt) {
-                        item.ticket.calledAt = new Date();
-                    }
-                    state.calledTickets.push({
-                        id: item.ticket.id,
-                        procedureKey: item.key,
-                        calledOrder: item.ticket.calledOrder
-                    });
-                });
-        }
-
         async function fetchQueueState() {
             try {
                 const response = await fetch('/api/queue');
@@ -476,9 +436,8 @@
                     });
 
                     state.completed = data.completed.map(parseTicketDates);
-                    // Build generated tickets array for analytics only for initial load
                     if (!state.generatedTickets.length) {
-                        fetchHistoricalTickets('', ''); // Load all for today initially
+                        fetchHistoricalTickets('', ''); 
                     }
 
                     render();
@@ -502,7 +461,7 @@
                 if (result.status === 'success') {
                     state.generatedTickets = result.data.generatedTickets.map(parseTicketDates);
                     state.completedTicketsHistory = result.data.completedTickets.map(parseTicketDates);
-                    renderDashboard(); // Re-render charts with new historical data
+                    renderDashboard();
                 }
             } catch (error) {
                 console.warn('Unable to load historical reports.', error);
@@ -510,13 +469,11 @@
         }
 
         function loadSavedState() {
-            // Replaced by live fetchQueueState polling
             fetchQueueState();
             setInterval(fetchQueueState, 2000);
         }
 
         function saveQueueState() {
-            // Deprecated: Queue state is now managed purely by the backend database
         }
 
         const navItems = document.querySelectorAll('.nav-item');
@@ -577,7 +534,6 @@
                 
                 if (result.status === 'success') {
                     const ticketData = result.ticket;
-                    // Temporarily update local state so the preview UI works immediately
                     const t = {
                         id: ticketData.ticket_code,
                         procedureKey: ticketData.procedure_code.toLowerCase(),
@@ -590,7 +546,7 @@
                     state.latestTicket = t;
                     
                     formNote.textContent = `${t.id} added to ${t.procedure}.`;
-                    fetchQueueState(); // Immediately pull new state
+                    fetchQueueState();
                 } else {
                     alert('Error generating ticket: ' + (result.error || 'Unknown error'));
                 }
@@ -620,7 +576,7 @@
                 });
                 const result = await response.json();
                 if (result.status === 'success') {
-                    fetchQueueState(); // Refresh UI instantly
+                    fetchQueueState();
                 } else {
                     alert(result.message || 'Error calling ticket');
                 }
@@ -643,7 +599,7 @@
                 });
                 const result = await response.json();
                 if (result.status === 'success') {
-                    fetchQueueState(); // Refresh UI instantly
+                    fetchQueueState();
                 } else {
                     alert(result.message || 'Error completing ticket');
                 }
@@ -667,19 +623,16 @@
             renderManageQueue();
             renderDashboard();
             renderLiveMonitor();
-            saveQueueState();
         }
 
         function renderLatestTicket() {
             const latestTicket = document.getElementById('latestTicket');
             if (!state.latestTicket) {
-                // remove any procedure class when empty
                 ['xray','ultrasound','ctscan'].forEach(k => latestTicket.classList.remove('proc-' + k));
                 latestTicket.innerHTML = '<p>No ticket generated yet this session.</p>';
                 return;
             }
 
-            // ensure latestTicket has a procedure-specific class so we can style it
             ['xray','ultrasound','ctscan'].forEach(k => latestTicket.classList.remove('proc-' + k));
             latestTicket.classList.add('proc-' + state.latestTicket.procedureKey);
 
@@ -765,8 +718,6 @@
             const startDateValue = document.getElementById('startDateFilter').value;
             const endDateValue = document.getElementById('endDateFilter').value;
             const categoryValue = document.getElementById('categoryFilter').value;
-            // The state.generatedTickets and state.completedTicketsHistory are already fetched for the date range
-            // We just need to filter them by category here
             const filteredGeneratedTickets = filterAnalyticsTickets(state.generatedTickets, null, null, categoryValue, 'createdAt');
             const filteredCompletedTickets = filterAnalyticsTickets(state.completedTicketsHistory || [], null, null, categoryValue, 'completedAt');
             
@@ -961,7 +912,6 @@
             `;
         }
 
-        // Live monitor rendering: compact 'Now Serving' card used on dashboard
         function renderLiveMonitor() {
             const simple = document.getElementById('monitorSimpleNow');
             if (!simple) return;
@@ -978,16 +928,6 @@
                     </li>
                 `;
             }).join('');
-        }
-
-        async function loadAds() {
-            try {
-                adLibrary = await getStoredAds();
-                renderAdsView();
-                renderAdsPreview();
-            } catch (error) {
-                console.warn('Unable to load ads.', error);
-            }
         }
 
         function renderAdsView() {
@@ -1015,10 +955,7 @@
                             <strong>${escapeHtml(ad.name)}</strong>
                             <small>${ad.duration}s on screen</small>
                         </div>
-                        <span class="ad-status ${ad.active ? 'active' : 'paused'}">${ad.active ? 'Active' : 'Paused'}</span>
-                        <button class="ad-small-btn" type="button" onclick="toggleAdStatus('${ad.id}')">${ad.active ? 'Pause' : 'Resume'}</button>
-                        <button class="ads-icon-btn" type="button" onclick="editAdDuration('${ad.id}')" aria-label="Edit ad">✎</button>
-                        <button class="ads-icon-btn" type="button" onclick="removeAd('${ad.id}')" aria-label="Delete ad">⌫</button>
+                        <button class="ads-icon-btn" type="button" onclick="deleteAd(${ad.id})" aria-label="Delete ad">⌫</button>
                     </div>
                 `;
             }).join('');
@@ -1040,29 +977,14 @@
         }
 
         async function toggleAdStatus(id) {
-            const ad = adLibrary.find((item) => item.id === id);
-            if (!ad) return;
-            ad.active = !ad.active;
-            await saveStoredAd(ad);
-            await loadAds();
+            // Placeholder: Not implemented in Phase 6 backend yet
         }
 
         async function editAdDuration(id) {
-            const ad = adLibrary.find((item) => item.id === id);
-            if (!ad) return;
-            const value = prompt('Seconds on screen', ad.duration);
-            if (value === null) return;
-            const duration = Math.max(3, Math.min(60, Number(value) || ad.duration));
-            ad.duration = duration;
-            await saveStoredAd(ad);
-            await loadAds();
+            // Placeholder: Not implemented in Phase 6 backend yet
         }
 
-        async function removeAd(id) {
-            if (!confirm('Remove this ad from the library?')) return;
-            await deleteStoredAd(id);
-            await loadAds();
-        }
+        // The deleteAd function is defined above
 
         function renderAdsPreview() {
             const stage = document.getElementById('adsPreviewStage');
@@ -1128,25 +1050,40 @@
         });
         document.getElementById('adForm').addEventListener('submit', async (event) => {
             event.preventDefault();
-            if (!selectedAdFile || !selectedAdDataUrl) {
+            if (!selectedAdFile) {
                 alert('Please choose an image or video first.');
                 return;
             }
 
-            const ad = {
-                id: `ad-${Date.now()}`,
-                name: selectedAdFile.name,
-                type: selectedAdFile.type || 'application/octet-stream',
-                src: selectedAdDataUrl,
-                duration: Math.max(3, Math.min(60, Number(document.getElementById('adDurationInput').value) || 8)),
-                active: document.getElementById('adActiveInput').checked,
-                order: adLibrary.length + 1,
-                createdAt: new Date().toISOString()
-            };
+            const submitBtn = event.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = 'Uploading...';
+            submitBtn.disabled = true;
 
-            await saveStoredAd(ad);
-            resetAdForm();
-            await loadAds();
+            const formData = new FormData();
+            formData.append('media', selectedAdFile);
+            formData.append('duration', Math.max(3, Math.min(60, Number(document.getElementById('adDurationInput').value) || 8)));
+            formData.append('active', document.getElementById('adActiveInput').checked);
+
+            try {
+                const response = await fetch('/api/ads', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                if (result.status === 'success') {
+                    resetAdForm();
+                    await loadAds();
+                } else {
+                    alert('Upload failed: ' + (result.error || 'Unknown error'));
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Upload failed due to network error.');
+            } finally {
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+            }
         });
 
         // Header clock: update date and time in the top-right header

@@ -139,30 +139,21 @@ $pageData = $pageData ?? include __DIR__ . '/../data/public-display-data.php';
             }
         }
 
-        function openAdsDb() {
-            return new Promise((resolve, reject) => {
-                const request = indexedDB.open(adsDbName, 1);
-                request.onupgradeneeded = () => {
-                    const db = request.result;
-                    if (!db.objectStoreNames.contains(adsStoreName)) {
-                        db.createObjectStore(adsStoreName, { keyPath: 'id' });
-                    }
-                };
-                request.onsuccess = () => resolve(request.result);
-                request.onerror = () => reject(request.error);
-            });
-        }
-
-        async function getDisplayAds() {
-            const db = await openAdsDb();
-            return new Promise((resolve, reject) => {
-                const tx = db.transaction(adsStoreName, 'readonly');
-                const request = tx.objectStore(adsStoreName).getAll();
-                request.onsuccess = () => resolve(request.result
-                    .filter((ad) => ad.active)
-                    .sort((a, b) => (a.order || 0) - (b.order || 0)));
-                request.onerror = () => reject(request.error);
-            });
+        // ----------------------------------------------------
+        // ADVERTISEMENTS (API Integration)
+        // ----------------------------------------------------
+        async function fetchAds() {
+            try {
+                const response = await fetch('/api/ads');
+                const result = await response.json();
+                if (result.status === 'success') {
+                    return result.data;
+                }
+                return [];
+            } catch (err) {
+                console.warn('Error fetching ads', err);
+                return [];
+            }
         }
 
         function renderDisplayAd(ads) {
@@ -193,13 +184,14 @@ $pageData = $pageData ?? include __DIR__ . '/../data/public-display-data.php';
 
         async function refreshDisplayAds() {
             try {
-                const ads = await getDisplayAds();
-                if (!ads.length) return;
-                const signature = ads.map((ad) => `${ad.id}:${ad.active}:${ad.duration}`).join('|');
+                const ads = await fetchAds();
+                const activeAds = ads.filter(ad => ad.active);
+                if (!activeAds.length) return;
+                const signature = activeAds.map((ad) => `${ad.id}:${ad.active}:${ad.duration}`).join('|');
                 if (signature !== publicAdsSignature) {
                     publicAdsSignature = signature;
                     publicAdIndex = 0;
-                    renderDisplayAd(ads);
+                    renderDisplayAd(activeAds);
                 }
             } catch (error) {
                 console.warn('Unable to load display ads.', error);
