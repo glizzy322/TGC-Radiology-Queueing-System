@@ -476,18 +476,36 @@
                     });
 
                     state.completed = data.completed.map(parseTicketDates);
-                    // Build generated tickets array for analytics
-                    state.generatedTickets = [];
-                    ['xray', 'ultrasound', 'ctscan'].forEach(key => {
-                        state.generatedTickets.push(...state.queues[key]);
-                        state.generatedTickets.push(...state.serving[key].filter(Boolean));
-                    });
-                    state.generatedTickets.push(...state.completed);
+                    // Build generated tickets array for analytics only for initial load
+                    if (!state.generatedTickets.length) {
+                        fetchHistoricalTickets('', ''); // Load all for today initially
+                    }
 
                     render();
                 }
             } catch (error) {
                 console.warn('Unable to load live queue state.', error);
+            }
+        }
+
+        async function fetchHistoricalTickets(start, end) {
+            try {
+                let url = '/api/reports/tickets';
+                const params = [];
+                if (start) params.push(`start=${start}`);
+                if (end) params.push(`end=${end}`);
+                if (params.length > 0) url += '?' + params.join('&');
+                
+                const response = await fetch(url);
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    state.generatedTickets = result.data.generatedTickets.map(parseTicketDates);
+                    state.completedTicketsHistory = result.data.completedTickets.map(parseTicketDates);
+                    renderDashboard(); // Re-render charts with new historical data
+                }
+            } catch (error) {
+                console.warn('Unable to load historical reports.', error);
             }
         }
 
@@ -747,8 +765,11 @@
             const startDateValue = document.getElementById('startDateFilter').value;
             const endDateValue = document.getElementById('endDateFilter').value;
             const categoryValue = document.getElementById('categoryFilter').value;
-            const filteredGeneratedTickets = filterAnalyticsTickets(state.generatedTickets, startDateValue, endDateValue, categoryValue, 'createdAt');
-            const filteredCompletedTickets = filterAnalyticsTickets(state.completed, startDateValue, endDateValue, categoryValue, 'completedAt');
+            // The state.generatedTickets and state.completedTicketsHistory are already fetched for the date range
+            // We just need to filter them by category here
+            const filteredGeneratedTickets = filterAnalyticsTickets(state.generatedTickets, null, null, categoryValue, 'createdAt');
+            const filteredCompletedTickets = filterAnalyticsTickets(state.completedTicketsHistory || [], null, null, categoryValue, 'completedAt');
+            
             const generatedCounts = getProcedureCounts(filteredGeneratedTickets);
             const busiestCategory = Object.entries(generatedCounts)
                 .sort((a, b) => b[1] - a[1])
@@ -791,9 +812,12 @@
         }
 
         function setDateRange(startDate, endDate) {
-            document.getElementById('startDateFilter').value = startDate ? toDateInputValue(startDate) : '';
-            document.getElementById('endDateFilter').value = endDate ? toDateInputValue(endDate) : '';
-            renderDashboard();
+            const startStr = startDate ? toDateInputValue(startDate) : '';
+            const endStr = endDate ? toDateInputValue(endDate) : '';
+            document.getElementById('startDateFilter').value = startStr;
+            document.getElementById('endDateFilter').value = endStr;
+            fetchHistoricalTickets(startStr, endStr);
+            syncDateShortcutState();
         }
 
         function syncDateShortcutState() {
@@ -1077,8 +1101,14 @@
             }
         }
 
-        document.getElementById('startDateFilter').addEventListener('change', renderDashboard);
-        document.getElementById('endDateFilter').addEventListener('change', renderDashboard);
+        document.getElementById('startDateFilter').addEventListener('change', function() {
+            fetchHistoricalTickets(this.value, document.getElementById('endDateFilter').value);
+            syncDateShortcutState();
+        });
+        document.getElementById('endDateFilter').addEventListener('change', function() {
+            fetchHistoricalTickets(document.getElementById('startDateFilter').value, this.value);
+            syncDateShortcutState();
+        });
         document.getElementById('categoryFilter').addEventListener('change', renderDashboard);
         document.getElementById('downloadExcelBtn').addEventListener('click', downloadExcelReport);
         document.querySelectorAll('[data-range]').forEach((button) => {
@@ -1153,8 +1183,8 @@
             const endLabel = endDateValue ? new Date(`${endDateValue}T00:00:00`).toLocaleDateString() : 'All dates';
             const categoryLabel = categoryValue === 'all' ? 'All Categories' : procedures[categoryValue]?.name || categoryValue;
 
-            const filteredGenerated = filterAnalyticsTickets(state.generatedTickets, startDateValue, endDateValue, categoryValue, 'createdAt');
-            const filteredCompleted = filterAnalyticsTickets(state.completed, startDateValue, endDateValue, categoryValue, 'completedAt');
+            const filteredGenerated = filterAnalyticsTickets(state.generatedTickets, null, null, categoryValue, 'createdAt');
+            const filteredCompleted = filterAnalyticsTickets(state.completedTicketsHistory || [], null, null, categoryValue, 'completedAt');
 
             const generatedCounts = getProcedureCounts(filteredGenerated);
             const busiestEntry = Object.entries(generatedCounts).sort((a, b) => b[1] - a[1]).find(e => e[1] > 0);
