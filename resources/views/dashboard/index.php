@@ -246,23 +246,58 @@
                                 <h3>Add a new ad</h3>
                                 <button class="ads-icon-btn" id="cancelAdFormBtn" type="button" aria-label="Close ad form">x</button>
                             </div>
-                            <label class="ads-upload">
-                                <span class="ads-upload-icon">↑</span>
-                                <strong>Click to choose a file from your device</strong>
-                                <small>JPG, PNG, WEBP, MP4, WEBM, or MOV</small>
-                                <input id="adFileInput" type="file" accept="image/*,video/mp4,video/webm,video/quicktime" hidden>
-                            </label>
-                            <div class="ads-file-note" id="adFileNote">No file selected.</div>
-                            <label class="ads-duration-control">
-                                <span>Seconds on screen</span>
-                                <input id="adDurationInput" type="number" min="3" max="60" value="8">
-                            </label>
-                            <label class="ads-check-control">
-                                <input id="adActiveInput" type="checkbox" checked>
-                                <span>Show this ad on the public display</span>
-                            </label>
+                            
+                            <!-- New Drag & Drop UI -->
+                            <div class="pattern-upload-container">
+                                <div class="upload-dropzone" id="adDropzone">
+                                    <input id="adFileInput" type="file" accept="image/*,video/mp4,video/webm,video/quicktime" multiple hidden>
+                                    
+                                    <div class="dropzone-content">
+                                        <div class="dropzone-icon">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                                        </div>
+                                        <div class="dropzone-text">
+                                            <p>Drop files here or <button type="button" class="browse-btn" onclick="document.getElementById('adFileInput').click()">browse files</button></p>
+                                            <p class="dropzone-subtext">Maximum file size: 50MB • Maximum files: 10</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="upload-files-section" id="uploadFilesSection" hidden>
+                                    <div class="files-header">
+                                        <h3 id="filesCountHeader">Files (0)</h3>
+                                        <div class="files-actions">
+                                            <button type="button" class="btn-outline-sm" onclick="document.getElementById('adFileInput').click()">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>
+                                                Add files
+                                            </button>
+                                            <button type="button" class="btn-outline-sm" id="clearFilesBtn">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                                                Remove all
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="files-grid" id="uploadFilesGrid">
+                                        <!-- Rendered dynamically in JS -->
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- End New Drag & Drop UI -->
+
+                            <div class="ads-settings-group">
+                                <label class="ads-duration-control">
+                                    <span>Seconds on screen</span>
+                                    <input id="adDurationInput" type="number" min="3" max="60" value="8">
+                                </label>
+                                <label class="ads-check-control">
+                                    <input id="adActiveInput" type="checkbox" checked>
+                                    <span>Show this ad on the public display</span>
+                                </label>
+                            </div>
+
                             <div class="ads-form-actions">
-                                <button class="ads-save-btn" id="saveAdBtn" type="submit">Add ad</button>
+                                <button class="ads-save-btn" id="saveAdBtn" type="submit">Upload all</button>
                                 <button class="ads-cancel-btn" id="cancelAdFormBtn2" type="button">Cancel</button>
                             </div>
                         </form>
@@ -345,9 +380,9 @@
         const currentUserName = <?= json_encode($userName ?? '') ?>;
         const currentRole = <?= json_encode($userRole ?? '') ?>;
         const procedures = {
-            xray: { name: 'X-Ray', shortName: 'X-RAY', chartLabel: 'Xray', prefix: 'XR', maxServing: 2 },
-            ultrasound: { name: 'Ultrasound', shortName: 'UTZ', chartLabel: 'Utz', prefix: 'UT', maxServing: 2 },
-            ctscan: { name: 'CT Scan', shortName: 'CTS', chartLabel: 'CTS', prefix: 'CT', maxServing: 1 }
+            xray: { name: 'X-Ray', shortName: 'X-RAY', chartLabel: 'X-Ray', prefix: 'XR', maxServing: 2 },
+            ultrasound: { name: 'Ultrasound', shortName: 'UTZ', chartLabel: 'Ultrasound', prefix: 'UT', maxServing: 2 },
+            ctscan: { name: 'CT Scan', shortName: 'CTS', chartLabel: 'CT Scan', prefix: 'CT', maxServing: 1 }
         };
 
         const state = {
@@ -498,7 +533,8 @@
                     });
 
                     state.completed = data.completed.map(parseTicketDates);
-                    if (!state.generatedTickets.length) {
+                    if (!state.analyticsLoaded) {
+                        state.analyticsLoaded = true;
                         fetchHistoricalTickets('', ''); 
                     }
 
@@ -801,7 +837,6 @@
         function render() {
             renderLatestTicket();
             renderManageQueue();
-            renderDashboard();
             renderLiveMonitor();
         }
 
@@ -1066,6 +1101,11 @@
 
         function renderProcedureChart(tickets) {
             const chart = document.getElementById('procedureBarChart');
+            if (tickets.length === 0) {
+                chart.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-weight:600;">No data available for this date range</div>';
+                return;
+            }
+
             const counts = Object.entries(procedures).map(([key, procedure]) => ({
                 key,
                 label: procedure.chartLabel,
@@ -1099,6 +1139,12 @@
         function renderPatientPie(tickets) {
             const pie = document.getElementById('patientPieChart');
             const legend = document.getElementById('patientPieLegend');
+            if (tickets.length === 0) {
+                pie.style.background = 'conic-gradient(#eee8df 0 100%)';
+                pie.innerHTML = '<span>0</span>';
+                legend.innerHTML = '<div style="color:var(--muted)">No data available</div>';
+                return;
+            }
             const ipd = tickets.filter((ticket) => ticket.patientType === 'IPD').length;
             const opd = tickets.filter((ticket) => ticket.patientType === 'OPD').length;
             const total = ipd + opd;
@@ -1250,22 +1296,124 @@
         }
         const showAdFormBtn = document.getElementById('showAdFormBtn');
         if (showAdFormBtn) {
-            showAdFormBtn.addEventListener('click', () => {
-                document.getElementById('adForm').hidden = false;
+            const adForm = document.getElementById('adForm');
+            const dropzone = document.getElementById('adDropzone');
+            const fileInput = document.getElementById('adFileInput');
+            const filesSection = document.getElementById('uploadFilesSection');
+            const filesGrid = document.getElementById('uploadFilesGrid');
+            const filesCountHeader = document.getElementById('filesCountHeader');
+            
+            let uploadFilesQueue = []; // Array of { file, id, preview, status, progress }
+
+            function renderUploadFiles() {
+                if (uploadFilesQueue.length === 0) {
+                    filesSection.hidden = true;
+                    return;
+                }
+                filesSection.hidden = false;
+                filesCountHeader.textContent = `Files (${uploadFilesQueue.length})`;
+                
+                filesGrid.innerHTML = uploadFilesQueue.map(item => {
+                    const isImage = item.file.type.startsWith('image/');
+                    return `
+                    <div class="file-card">
+                        <button type="button" class="file-card-remove" onclick="removeUploadFile('${item.id}')">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </button>
+                        <div class="file-card-preview">
+                            ${isImage && item.preview ? `<img src="${item.preview}">` : `
+                                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                            `}
+                            ${item.status === 'uploading' ? `
+                                <div class="file-upload-overlay">
+                                    <svg class="circular-progress" viewBox="0 0 48 48">
+                                        <circle class="bg" cx="24" cy="24" r="20"></circle>
+                                        <circle class="fg" cx="24" cy="24" r="20" style="stroke-dashoffset: ${125.6 * (1 - item.progress / 100)}"></circle>
+                                    </svg>
+                                </div>
+                            ` : ''}
+                        </div>
+                        <div class="file-card-info">
+                            <p class="file-card-name" title="${escapeHtml(item.file.name)}">${escapeHtml(item.file.name)}</p>
+                            <span class="file-card-size">${(item.file.size / 1024 / 1024).toFixed(2)} MB</span>
+                        </div>
+                    </div>
+                    `;
+                }).join('');
+            }
+
+            window.removeUploadFile = function(id) {
+                uploadFilesQueue = uploadFilesQueue.filter(f => f.id !== id);
+                renderUploadFiles();
+            };
+
+            function handleNewFiles(files) {
+                Array.from(files).forEach(file => {
+                    if (uploadFilesQueue.length >= 10) return;
+                    if (file.size > 50 * 1024 * 1024) return;
+                    
+                    const id = 'file_' + Math.random().toString(36).substr(2, 9);
+                    const preview = file.type.startsWith('image/') ? URL.createObjectURL(file) : null;
+                    
+                    uploadFilesQueue.push({
+                        file,
+                        id,
+                        preview,
+                        status: 'pending',
+                        progress: 0
+                    });
+                });
+                renderUploadFiles();
+            }
+
+            fileInput.addEventListener('change', (e) => handleNewFiles(e.target.files));
+
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropzone.addEventListener(eventName, preventDefaults, false);
             });
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropzone.addEventListener(eventName, () => dropzone.classList.add('dragging'), false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropzone.addEventListener(eventName, () => dropzone.classList.remove('dragging'), false);
+            });
+
+            dropzone.addEventListener('drop', (e) => {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                handleNewFiles(files);
+            }, false);
+
+            document.getElementById('clearFilesBtn')?.addEventListener('click', () => {
+                uploadFilesQueue = [];
+                renderUploadFiles();
+            });
+
+            showAdFormBtn.addEventListener('click', () => {
+                adForm.hidden = false;
+            });
+            
+            function resetAdForm() {
+                adForm.hidden = true;
+                uploadFilesQueue = [];
+                renderUploadFiles();
+                fileInput.value = '';
+            }
+
             document.getElementById('cancelAdFormBtn').addEventListener('click', resetAdForm);
             document.getElementById('cancelAdFormBtn2').addEventListener('click', resetAdForm);
-            document.getElementById('adFileInput').addEventListener('change', async (event) => {
-                selectedAdFile = event.target.files[0] || null;
-                selectedAdDataUrl = selectedAdFile ? await readFileAsDataUrl(selectedAdFile) : '';
-                document.getElementById('adFileNote').textContent = selectedAdFile
-                    ? selectedAdFile.name
-                    : 'No file selected.';
-            });
-            document.getElementById('adForm').addEventListener('submit', async (event) => {
+
+            adForm.addEventListener('submit', async (event) => {
                 event.preventDefault();
-                if (!selectedAdFile) {
-                    alert('Please choose an image or video first.');
+                if (uploadFilesQueue.length === 0) {
+                    showAlert('Please choose at least one image or video first.');
                     return;
                 }
 
@@ -1274,30 +1422,37 @@
                 submitBtn.textContent = 'Uploading...';
                 submitBtn.disabled = true;
 
-                const formData = new FormData();
-                formData.append('media', selectedAdFile);
-                formData.append('duration', Math.max(3, Math.min(60, Number(document.getElementById('adDurationInput').value) || 8)));
-                formData.append('active', document.getElementById('adActiveInput').checked);
+                const duration = Math.max(3, Math.min(60, Number(document.getElementById('adDurationInput').value) || 8));
+                const active = document.getElementById('adActiveInput').checked;
 
-                try {
-                    const response = await fetch('/api/ads', {
-                        method: 'POST',
-                        body: formData
-                    });
-                    const result = await response.json();
-                    if (result.status === 'success') {
-                        resetAdForm();
-                        await loadAds();
-                    } else {
-                        alert('Upload failed: ' + (result.error || 'Unknown error'));
+                for (let i = 0; i < uploadFilesQueue.length; i++) {
+                    const item = uploadFilesQueue[i];
+                    item.status = 'uploading';
+                    item.progress = 30; // simulated start progress
+                    renderUploadFiles();
+
+                    const formData = new FormData();
+                    formData.append('media', item.file);
+                    formData.append('duration', duration);
+                    formData.append('active', active);
+
+                    try {
+                        const response = await fetch('/api/ads', { method: 'POST', body: formData });
+                        const result = await response.json();
+                        item.progress = 100;
+                        renderUploadFiles();
+                        if (result.status !== 'success') {
+                            console.error('Upload failed for', item.file.name, result.message);
+                        }
+                    } catch (err) {
+                        console.error('Upload error for', item.file.name, err);
                     }
-                } catch (err) {
-                    console.error(err);
-                    alert('Upload failed due to network error.');
-                } finally {
-                    submitBtn.textContent = originalText;
-                    submitBtn.disabled = false;
                 }
+
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+                resetAdForm();
+                fetchAds();
             });
         }
 
