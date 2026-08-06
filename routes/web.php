@@ -7,7 +7,7 @@ if (!isset($router)) {
 }
 
 $router->get('/', [\App\Controllers\LandingController::class, 'show']);
-$router->get('/receptionist', [\App\Controllers\ReceptionController::class, 'show']);
+$router->get('/dashboard', [\App\Controllers\DashboardController::class, 'show']);
 $router->get('/public-display', [\App\Controllers\PublicDisplayController::class, 'show']);
 $router->get('/test-db', [\App\Controllers\TestController::class, 'index']);
 $router->post('/api/tickets', [\App\Controllers\TicketController::class, 'store']);

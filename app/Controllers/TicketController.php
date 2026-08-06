@@ -8,6 +8,17 @@ class TicketController
 {
     public function store()
     {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+
+        if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'receptionist') {
+            http_response_code(403);
+            header('Content-Type: application/json');
+            echo json_encode(['error' => 'Unauthorized']);
+            return;
+        }
+
         header('Content-Type: application/json');
         
         $input = json_decode(file_get_contents('php://input'), true);

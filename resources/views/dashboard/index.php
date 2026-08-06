@@ -18,12 +18,16 @@
                 <button class="rqs-nav-item active nav-item" data-view="dashboard" type="button">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg> Dashboard
                 </button>
+                <?php if ($userRole === 'receptionist'): ?>
                 <button class="rqs-nav-item nav-item" data-view="reception" type="button">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg> Reception
                 </button>
+                <?php endif; ?>
+                <?php if ($userRole === 'radiology_staff'): ?>
                 <button class="rqs-nav-item nav-item" data-view="manage" type="button">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><line x1="10" x2="21" y1="6" y2="6"/><line x1="10" x2="21" y1="12" y2="12"/><line x1="10" x2="21" y1="18" y2="18"/><path d="M4 6h1v4"/><path d="M4 10h2"/><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"/></svg> Manage queue
                 </button>
+                <?php endif; ?>
                 <button class="rqs-nav-item nav-item" data-view="ads" type="button">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><rect width="18" height="14" x="3" y="5" rx="2"/><circle cx="8" cy="10" r="1.4"/><path d="m21 15-5-5L5 21"/></svg> Ads
                 </button>
@@ -155,6 +159,7 @@
                 </div>
             </section>
 
+            <?php if ($userRole === 'receptionist'): ?>
             <section class="view" id="receptionView" aria-labelledby="receptionTitle">
                 <h2 id="receptionTitle" class="sr-only">Reception</h2>
                     <div class="reception-layout">
@@ -201,11 +206,14 @@
                     </aside>
                 </div>
             </section>
+            <?php endif; ?>
 
+            <?php if ($userRole === 'radiology_staff'): ?>
             <section class="view" id="manageView" aria-labelledby="manageTitle">
                 <h2 id="manageTitle" class="sr-only">Manage queue</h2>
                 <div class="manage-grid" id="manageGrid"></div>
             </section>
+            <?php endif; ?>
 
             <section class="view" id="adsView" aria-labelledby="adsTitle">
                 <h2 id="adsTitle" class="sr-only">Ads</h2>
@@ -268,9 +276,11 @@
                 <section class="panel account-card">
                     <div>
                         <p class="account-label">Signed in as</p>
-                        <h3>Reception Desk</h3>
+                        <h3><?= htmlspecialchars($userName) ?></h3>
                     </div>
-                    <span>Radiology Queue Management System</span>
+                    <form method="POST" action="/logout" style="margin-top: 16px;">
+                        <button type="submit" class="secondary-action">Sign Out</button>
+                    </form>
                 </section>
             </section>
         </main>
