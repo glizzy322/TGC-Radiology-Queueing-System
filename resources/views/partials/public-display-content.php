@@ -124,10 +124,17 @@ $pageData = $pageData ?? include __DIR__ . '/../data/public-display-data.php';
         let audioEnabled = true;
         let lastServingIds = {};
 
-        function getQueueState() {
+        async function fetchQueueState() {
             try {
-                return JSON.parse(localStorage.getItem(storageKey) || '{}');
+                const response = await fetch('/api/queue');
+                const result = await response.json();
+                if (result.status === 'success') {
+                    const data = result.data;
+                    return data;
+                }
+                return {};
             } catch (error) {
+                console.warn('Unable to fetch live queue state.', error);
                 return {};
             }
         }
@@ -310,16 +317,17 @@ $pageData = $pageData ?? include __DIR__ . '/../data/public-display-data.php';
             });
         }
 
-        function refreshDisplayFromReception() {
-            const state = getQueueState();
-            renderIncoming(state.queues);
-            renderServing(state.serving, Array.isArray(state.calledTickets) ? state.calledTickets : []);
+        async function refreshDisplayFromReception() {
+            const state = await fetchQueueState();
+            if (state.queues && state.serving) {
+                renderIncoming(state.queues);
+                renderServing(state.serving, state.completed || []);
+            }
         }
 
         refreshDisplayFromReception();
         refreshDisplayAds();
-        setInterval(refreshDisplayFromReception, 1000);
+        setInterval(refreshDisplayFromReception, 2000);
         setInterval(refreshDisplayAds, 5000);
-        window.addEventListener('storage', refreshDisplayFromReception);
     });
 </script>
