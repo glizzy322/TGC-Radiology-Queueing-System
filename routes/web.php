@@ -11,6 +11,7 @@ $router->get('/dashboard', [\App\Controllers\DashboardController::class, 'show']
 $router->get('/public-display', [\App\Controllers\PublicDisplayController::class, 'show']);
 $router->get('/test-db', [\App\Controllers\TestController::class, 'index']);
 $router->post('/api/tickets', [\App\Controllers\TicketController::class, 'store']);
+$router->get('/api/queue', [\App\Controllers\QueueController::class, 'state']);
 $router->get('/login', [\App\Controllers\AuthController::class, 'showLogin']);
 $router->post('/login', [\App\Controllers\AuthController::class, 'processLogin']);
 $router->post('/logout', [\App\Controllers\AuthController::class, 'logout']);
