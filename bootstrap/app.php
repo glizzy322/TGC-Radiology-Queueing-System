@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+$config = require dirname(__DIR__) . '/config/app.php';
+date_default_timezone_set($config['timezone'] ?? 'Asia/Manila');
+
 // Register a basic autoloader
 spl_autoload_register(function ($class) {
     $prefix = 'App\\';

@@ -27,7 +27,11 @@ body {
     line-height: 1.35;
 }
 
-button,
+button {
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: 700;
+}
 a {
     font: inherit;
 }
@@ -38,6 +42,7 @@ a {
   width: 220px; flex-shrink: 0; background: #fff;
   border-right: 1px solid var(--line); padding: 24px 16px;
   display: flex; flex-direction: column; gap: 28px;
+  position: sticky; top: 0; height: 100vh;
 }
 .rqs-brand { display: flex; align-items: center; gap: 10px; padding: 0 4px; }
 .rqs-logo {
@@ -1206,7 +1211,7 @@ a {
 .choice-btn span,
 .choice-btn span.dim-text {
     color: var(--muted);
-    font-weight: 500;
+    font-weight: 700;
 }
 
 .choice-btn[data-procedure].selected {
@@ -1234,19 +1239,19 @@ a {
 
 .primary-action,
 .secondary-action {
-    min-height: 40px;
+    min-height: 38px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 12px;
+    gap: 8px;
     border: 1px solid transparent;
-    border-radius: 10px;
-    font-weight: 600;
+    border-radius: 6px;
+    font-weight: 700;
     letter-spacing: 0.2px;
     transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background-color 0.18s ease, color 0.18s ease;
     font-family: "Inter var", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
     line-height: 1.25rem;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.10), 0 1px 2px rgba(0,0,0,0.06);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     user-select: none;
     -webkit-user-select: none;
     touch-action: manipulation;
@@ -1268,13 +1273,13 @@ a {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 12px;
-    padding: 14px 24px;
+    gap: 8px;
+    padding: 8px 16px;
     color: #fff;
     background: #14783f;
-    border-radius: 9px;
-    font-size: 16px;
-    font-weight: 600;
+    border-radius: 6px;
+    font-size: 15px;
+    font-weight: 700;
     cursor: pointer;
     border: none;
     box-shadow: none;
@@ -1596,12 +1601,19 @@ a {
 }
 
 .ads-panel-head,
-.ads-preview-head,
+.ads-preview-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
 .ads-form-head {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 16px;
+    margin-bottom: 20px;
 }
 
 .ads-panel-head h3,
@@ -1638,7 +1650,7 @@ a {
     border-radius: 9px;
     background: #087447;
     color: #fff;
-    font-weight: 800;
+    font-weight: 700;
     cursor: pointer;
 }
 
@@ -2086,12 +2098,12 @@ a {
     width: 100%;
     justify-content: center;
 }
-.rqs-btn { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; border: 1px solid transparent; }
+.rqs-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; border: 1px solid var(--line); background: #fff; color: var(--text); }
 .rqs-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .rqs-btn-ghost { background: transparent; color: var(--muted); border-color: var(--line); }
 .rqs-btn-ghost:hover:not(:disabled) { background: #f0ede6; color: var(--text); }
-.rqs-btn-primary { background: var(--maroon); color: #fff; }
-.rqs-btn-primary:hover:not(:disabled) { background: #7a1527; }
+.rqs-btn-primary { background: var(--maroon); color: #fff; border-color: var(--maroon); }
+.rqs-btn-primary:hover:not(:disabled) { background: #7a1527; border-color: #7a1527; }
 
 .rqs-waiting-list { display: flex; flex-direction: column; gap: 6px; max-height: 260px; overflow-y: auto; }
 .rqs-waiting-row {
@@ -2283,6 +2295,9 @@ a {
     flex-direction: column;
     gap: 16px;
 }
+.upload-files-section[hidden] {
+    display: none !important;
+}
 .files-header {
     display: flex;
     align-items: center;
@@ -2420,3 +2435,4 @@ a {
     border-radius: 8px;
     border: 1px solid var(--line);
 }
+

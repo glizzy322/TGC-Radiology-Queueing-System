@@ -14,6 +14,12 @@
                 <img class="rqs-logo" src="/images/logo.png" alt="Tagum Global Medical Center Logo">
             </div>
 
+            <div class="user-indicator" style="padding: 12px 16px; margin: 0 12px 12px; background: rgba(0,0,0,0.03); border-radius: 8px;">
+                <div style="font-size: 11px; color: var(--muted); text-transform: uppercase; font-weight: 700; margin-bottom: 2px;">Logged in as</div>
+                <div style="color: var(--text); font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="<?= htmlspecialchars($userName ?? '') ?>"><?= htmlspecialchars($userName ?? '') ?></div>
+                <div style="font-size: 12px; color: var(--muted); margin-top: 2px; text-transform: capitalize;"><?= htmlspecialchars(str_replace('_', ' ', $userRole ?? '')) ?></div>
+            </div>
+
             <nav class="rqs-nav" aria-label="Main">
                 <?php if ($userRole !== 'radiology_staff'): ?>
                 <button class="rqs-nav-item active nav-item" data-view="dashboard" type="button">
@@ -38,8 +44,8 @@
             </nav>
             <div style="flex-grow: 1;"></div>
             <nav class="rqs-nav" style="margin-bottom: 12px;" aria-label="Account">
-                <button class="rqs-nav-item nav-item" data-view="account" type="button">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Account & Logout
+                <button class="rqs-nav-item" id="logoutBtn" type="button">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg> Sign Out
                 </button>
             </nav>
 
@@ -71,7 +77,7 @@
                             <div>
                                 <p class="filters-kicker">Report filters</p>
                                 <h3>Refine the analytics view</h3>
-                                <p class="filters-subtitle">Filter the summary by date range and procedure, or jump to a preset range.</p>
+                                <p class="filters-subtitle">Filter summary by date range.</p>
                             </div>
                         </div>
 
@@ -229,6 +235,7 @@
             </section>
             <?php endif; ?>
 
+
             <?php if ($userRole !== 'radiology_staff'): ?>
             <section class="view" id="adsView" aria-labelledby="adsTitle">
                 <h2 id="adsTitle" class="sr-only">Ads</h2>
@@ -322,18 +329,7 @@
             </section>
             <?php endif; ?>
 
-            <section class="view" id="accountView" aria-labelledby="accountTitle">
-                <h2 id="accountTitle" class="sr-only">Account</h2>
-                <section class="panel account-card">
-                    <div>
-                        <p class="account-label">Signed in as</p>
-                        <h3><?= htmlspecialchars($userName) ?></h3>
-                    </div>
-                    <form method="POST" action="/logout" style="margin-top: 16px;">
-                            <button type="submit" class="secondary-action">Sign Out</button>
-                    </form>
-                </section>
-            </section>
+
         </main>
         <div class="custom-confirm-overlay" id="customConfirmOverlay">
             <div class="custom-confirm-box">
@@ -354,14 +350,51 @@
     </div>
 
     <script>
-        // Custom Confirm Logic
-        function showConfirm(message, callback) {
+        // Custom Modal Logic for Alerts & Confirms
+        function showModal({ title, message, type = 'confirm', icon = 'warning', confirmText = 'Yes, Proceed', cancelText = 'Cancel', headerColor = 'var(--maroon)' }, callback) {
             const overlay = document.getElementById('customConfirmOverlay');
+            const titleEl = overlay.querySelector('.custom-confirm-header h4');
+            const iconSvg = overlay.querySelector('.custom-confirm-header svg');
             const msgEl = document.getElementById('customConfirmMessage');
             const btnCancel = document.getElementById('customConfirmCancel');
             const btnOk = document.getElementById('customConfirmOk');
+            const headerEl = overlay.querySelector('.custom-confirm-header');
 
+            titleEl.textContent = title;
             msgEl.textContent = message;
+            btnOk.textContent = confirmText;
+            btnCancel.textContent = cancelText;
+
+            // Set icon and header background dynamically
+            headerEl.style.backgroundColor = headerColor;
+            
+            if (icon === 'warning') {
+                iconSvg.innerHTML = '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line>';
+                iconSvg.style.color = 'var(--green-soft)';
+            } else if (icon === 'info') {
+                iconSvg.innerHTML = '<circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line>';
+                iconSvg.style.color = '#fff';
+            } else if (icon === 'error') {
+                iconSvg.innerHTML = '<circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line>';
+                iconSvg.style.color = '#fff';
+            } else if (icon === 'logout') {
+                iconSvg.innerHTML = '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line>';
+                iconSvg.style.color = '#fff';
+            } else if (icon === 'trash') {
+                iconSvg.innerHTML = '<polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line>';
+                iconSvg.style.color = '#fff';
+            } else {
+                iconSvg.innerHTML = '';
+            }
+
+            if (type === 'alert') {
+                btnCancel.style.display = 'none';
+                btnOk.style.marginLeft = 'auto'; // optional, pushes button to right
+            } else {
+                btnCancel.style.display = 'inline-block';
+                btnOk.style.marginLeft = '0';
+            }
+
             overlay.classList.add('active');
 
             const cleanup = () => {
@@ -370,11 +403,48 @@
                 btnOk.removeEventListener('click', onOk);
             };
 
-            const onCancel = () => { cleanup(); callback(false); };
-            const onOk = () => { cleanup(); callback(true); };
+            const onCancel = () => { cleanup(); if (callback) callback(false); };
+            const onOk = () => { cleanup(); if (callback) callback(true); };
 
             btnCancel.addEventListener('click', onCancel);
             btnOk.addEventListener('click', onOk);
+        }
+
+        function showConfirm(options, callback) {
+            if (typeof options === 'string') {
+                options = { message: options };
+            }
+            showModal({ 
+                title: options.title || 'Confirmation Required', 
+                message: options.message, 
+                type: 'confirm', 
+                icon: options.icon || 'warning',
+                headerColor: options.headerColor || 'var(--maroon)',
+                confirmText: options.confirmText || 'Yes, Proceed'
+            }, callback);
+        }
+
+        window.alert = function(message) {
+            showModal({ title: 'Alert', message: message, type: 'alert', icon: 'info', confirmText: 'OK', headerColor: '#007bff' });
+        };
+        window.showAlert = window.alert;
+
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', () => {
+                showConfirm({ title: 'Sign Out', message: 'Are you sure you want to sign out?', icon: 'logout', confirmText: 'Sign Out' }, (confirmed) => {
+                    if (confirmed) {
+                        localStorage.removeItem('rqs_filter_start');
+                        localStorage.removeItem('rqs_filter_end');
+                        localStorage.removeItem('rqs_filter_category');
+                        const form = document.createElement('form');
+                        form.method = 'POST';
+                        form.action = '/logout';
+                        document.body.appendChild(form);
+                        form.submit();
+                    }
+                });
+            });
         }
 
         const currentUserName = <?= json_encode($userName ?? '') ?>;
@@ -442,7 +512,7 @@
         }
 
         function deleteAd(id) {
-            showConfirm('Are you sure you want to delete this advertisement?', async (confirmed) => {
+            showConfirm({ title: 'Delete Advertisement', message: 'Are you sure you want to delete this advertisement?', icon: 'trash', confirmText: 'Delete' }, async (confirmed) => {
                 if (!confirmed) return;
             try {
                 const response = await fetch('/api/ads/delete', {
@@ -535,7 +605,23 @@
                     state.completed = data.completed.map(parseTicketDates);
                     if (!state.analyticsLoaded) {
                         state.analyticsLoaded = true;
-                        fetchHistoricalTickets('', ''); 
+                        if (typeof applyDateShortcut === 'function' && document.getElementById('startDateFilter')) {
+                            const savedStart = localStorage.getItem('rqs_filter_start');
+                            const savedEnd = localStorage.getItem('rqs_filter_end');
+                            const savedCat = localStorage.getItem('rqs_filter_category');
+                            
+                            if (savedStart !== null || savedEnd !== null || savedCat !== null) {
+                                document.getElementById('startDateFilter').value = savedStart || '';
+                                document.getElementById('endDateFilter').value = savedEnd || '';
+                                if (savedCat) document.getElementById('categoryFilter').value = savedCat;
+                                fetchHistoricalTickets(savedStart || '', savedEnd || '');
+                                syncDateShortcutState();
+                            } else {
+                                applyDateShortcut('year');
+                            }
+                        } else {
+                            fetchHistoricalTickets('', ''); 
+                        }
                     }
 
                     render();
@@ -1004,6 +1090,8 @@
             const endStr = endDate ? toDateInputValue(endDate) : '';
             document.getElementById('startDateFilter').value = startStr;
             document.getElementById('endDateFilter').value = endStr;
+            localStorage.setItem('rqs_filter_start', startStr);
+            localStorage.setItem('rqs_filter_end', endStr);
             fetchHistoricalTickets(startStr, endStr);
             syncDateShortcutState();
         }
@@ -1102,7 +1190,14 @@
         function renderProcedureChart(tickets) {
             const chart = document.getElementById('procedureBarChart');
             if (tickets.length === 0) {
-                chart.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-weight:600;">No data available for this date range</div>';
+                chart.innerHTML = `
+                    <div style="grid-column: 1 / -1; grid-row: 1 / -1; display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; padding: 48px 0; border: 1px dashed #e4e4e7; border-radius: 8px; background: #fafafa;">
+                        <div style="display:flex; align-items:center; justify-content:center; width:48px; height:48px; border-radius:8px; background: #f4f4f5; margin-bottom:16px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #71717a;"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
+                        </div>
+                        <h4 style="margin: 0 0 4px 0; font-size: 16px; font-weight: 600; color: #18181b;">No data yet</h4>
+                        <p style="margin: 0; font-size: 14px; color: #71717a; text-align: center;">No data available for this date range.</p>
+                    </div>`;
                 return;
             }
 
@@ -1281,14 +1376,19 @@
         const startDateFilter = document.getElementById('startDateFilter');
         if (startDateFilter) {
             startDateFilter.addEventListener('change', function() {
+                localStorage.setItem('rqs_filter_start', this.value);
                 fetchHistoricalTickets(this.value, document.getElementById('endDateFilter').value);
                 syncDateShortcutState();
             });
             document.getElementById('endDateFilter').addEventListener('change', function() {
+                localStorage.setItem('rqs_filter_end', this.value);
                 fetchHistoricalTickets(document.getElementById('startDateFilter').value, this.value);
                 syncDateShortcutState();
             });
-            document.getElementById('categoryFilter').addEventListener('change', renderDashboard);
+            document.getElementById('categoryFilter').addEventListener('change', function() {
+                localStorage.setItem('rqs_filter_category', this.value);
+                renderDashboard();
+            });
             document.getElementById('downloadExcelBtn').addEventListener('click', downloadExcelReport);
             document.querySelectorAll('[data-range]').forEach((button) => {
                 button.addEventListener('click', () => applyDateShortcut(button.dataset.range));
@@ -1308,6 +1408,7 @@
             function renderUploadFiles() {
                 if (uploadFilesQueue.length === 0) {
                     filesSection.hidden = true;
+                    if (fileInput) fileInput.value = ''; // Allow re-selecting the same file
                     return;
                 }
                 filesSection.hidden = false;
@@ -1394,6 +1495,7 @@
             document.getElementById('clearFilesBtn')?.addEventListener('click', () => {
                 uploadFilesQueue = [];
                 renderUploadFiles();
+                fileInput.value = '';
             });
 
             showAdFormBtn.addEventListener('click', () => {
@@ -1490,8 +1592,8 @@
             const endLabel = endDateValue ? new Date(`${endDateValue}T00:00:00`).toLocaleDateString() : 'All dates';
             const categoryLabel = categoryValue === 'all' ? 'All Categories' : procedures[categoryValue]?.name || categoryValue;
 
-            const filteredGenerated = filterAnalyticsTickets(state.generatedTickets, null, null, categoryValue, 'createdAt');
-            const filteredCompleted = filterAnalyticsTickets(state.completedTicketsHistory || [], null, null, categoryValue, 'completedAt');
+            const filteredGenerated = filterAnalyticsTickets(state.generatedTickets, startDateValue, endDateValue, categoryValue, 'createdAt');
+            const filteredCompleted = filterAnalyticsTickets(state.completedTicketsHistory || [], startDateValue, endDateValue, categoryValue, 'completedAt');
 
             const generatedCounts = getProcedureCounts(filteredGenerated);
             const busiestEntry = Object.entries(generatedCounts).sort((a, b) => b[1] - a[1]).find(e => e[1] > 0);
@@ -1605,8 +1707,8 @@
             // Generate filename with date
             const now = new Date();
             const dateStamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-            const filterSuffix = yearValue !== 'all' || monthValue !== 'all' || categoryValue !== 'all'
-                ? `_${yearLabel}_${monthLabel}_${categoryLabel}`.replace(/\s+/g, '-')
+            const filterSuffix = (startDateValue || endDateValue || categoryValue !== 'all')
+                ? `_Filtered_${categoryLabel}`.replace(/\s+/g, '-')
                 : '';
             const fileName = `Radiology_QMS_Report_${dateStamp}${filterSuffix}.xlsx`;
 

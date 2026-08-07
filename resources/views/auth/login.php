@@ -40,6 +40,11 @@
             max-width: 380px;
             text-align: center;
             border: 1px solid rgba(255, 255, 255, 0.6);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .login-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 16px 48px rgba(0,0,0,0.4);
         }
         .login-card h1 {
             font-size: 24px;
@@ -70,10 +75,11 @@
             font-size: 14px;
             box-sizing: border-box;
             outline: none;
-            transition: border-color 0.2s;
+            transition: border-color 0.2s, box-shadow 0.2s;
         }
         .form-group input:focus {
             border-color: var(--green);
+            box-shadow: 0 0 0 3px rgba(43, 122, 76, 0.2);
         }
         .btn-login {
             width: 100%;
@@ -85,10 +91,35 @@
             font-size: 16px;
             font-weight: 600;
             cursor: pointer;
-            transition: background-color 0.2s;
+            transition: background-color 0.2s, transform 0.2s ease, box-shadow 0.2s ease;
         }
         .btn-login:hover {
             background-color: #2b7a4c;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(43, 122, 76, 0.3);
+        }
+        .btn-login:active {
+            transform: translateY(0);
+        }
+        .btn-public {
+            display: inline-block; 
+            text-decoration: none; 
+            padding: 12px 24px; 
+            background-color: #e9f2ec; 
+            color: #145a2e; 
+            border-radius: 8px; 
+            font-weight: 600; 
+            font-size: 14px; 
+            border: 1px solid #145a2e33;
+            transition: background-color 0.2s, transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .btn-public:hover {
+            background-color: #d8e8de;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(20, 90, 46, 0.15);
+        }
+        .btn-public:active {
+            transform: translateY(0);
         }
         .error-msg {
             color: #dc2626;
@@ -133,6 +164,9 @@
 
             <button type="submit" class="btn-login">Sign In</button>
         </form>
+        <div style="margin-top: 24px;">
+            <a href="/public-display" target="_blank" rel="noopener noreferrer" class="btn-public">Open Public Display</a>
+        </div>
     </div>
 
 </body>

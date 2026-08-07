@@ -23,6 +23,8 @@ class Database
 
             try {
                 self::$instance = new PDO($dsn, $config['username'], $config['password'], $options);
+                // Align database connection timezone with PHP timezone (Asia/Manila)
+                self::$instance->exec("SET time_zone = '+08:00'");
             } catch (PDOException $e) {
                 throw new \PDOException($e->getMessage(), (int)$e->getCode());
             }
