@@ -14,7 +14,7 @@
                 <img class="rqs-logo" src="/images/logo.png" alt="Tagum Global Medical Center Logo">
             </div>
 
-            <div class="user-indicator" style="padding: 12px 16px; margin: 0 12px 12px; background: rgba(0,0,0,0.03); border-radius: 8px;">
+            <div class="user-indicator" style="padding: 0 24px; margin-bottom: 16px;">
                 <div style="font-size: 11px; color: var(--muted); text-transform: uppercase; font-weight: 700; margin-bottom: 2px;">Logged in as</div>
                 <div style="color: var(--text); font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="<?= htmlspecialchars($userName ?? '') ?>"><?= htmlspecialchars($userName ?? '') ?></div>
                 <div style="font-size: 12px; color: var(--muted); margin-top: 2px; text-transform: capitalize;"><?= htmlspecialchars(str_replace('_', ' ', $userRole ?? '')) ?></div>
@@ -304,7 +304,7 @@
                             </div>
 
                             <div class="ads-form-actions">
-                                <button class="ads-save-btn" id="saveAdBtn" type="submit">Upload all</button>
+                                <button class="ads-save-btn" id="saveAdBtn" type="button">Upload all</button>
                                 <button class="ads-cancel-btn" id="cancelAdFormBtn2" type="button">Cancel</button>
                             </div>
                         </form>
@@ -425,7 +425,7 @@
         }
 
         window.alert = function(message) {
-            showModal({ title: 'Alert', message: message, type: 'alert', icon: 'info', confirmText: 'OK', headerColor: '#007bff' });
+            showModal({ title: 'Alert', message: message, type: 'alert', icon: 'info', confirmText: 'OK', headerColor: 'var(--maroon)' });
         };
         window.showAlert = window.alert;
 
@@ -451,7 +451,7 @@
         const currentRole = <?= json_encode($userRole ?? '') ?>;
         const procedures = {
             xray: { name: 'X-Ray', shortName: 'X-RAY', chartLabel: 'X-Ray', prefix: 'XR', maxServing: 2 },
-            ultrasound: { name: 'Ultrasound', shortName: 'UTZ', chartLabel: 'Ultrasound', prefix: 'UT', maxServing: 2 },
+            ultrasound: { name: 'Ultrasound', shortName: 'UTS', chartLabel: 'Ultrasound', prefix: 'UT', maxServing: 2 },
             ctscan: { name: 'CT Scan', shortName: 'CTS', chartLabel: 'CT Scan', prefix: 'CT', maxServing: 1 }
         };
 
@@ -1512,14 +1512,14 @@
             document.getElementById('cancelAdFormBtn').addEventListener('click', resetAdForm);
             document.getElementById('cancelAdFormBtn2').addEventListener('click', resetAdForm);
 
-            adForm.addEventListener('submit', async (event) => {
+            document.getElementById('saveAdBtn').addEventListener('click', async (event) => {
                 event.preventDefault();
                 if (uploadFilesQueue.length === 0) {
                     showAlert('Please choose at least one image or video first.');
                     return;
                 }
 
-                const submitBtn = event.target.querySelector('button[type="submit"]');
+                const submitBtn = document.getElementById('saveAdBtn');
                 const originalText = submitBtn.textContent;
                 submitBtn.textContent = 'Uploading...';
                 submitBtn.disabled = true;
