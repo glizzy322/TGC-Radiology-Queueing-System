@@ -242,10 +242,20 @@
                 <div class="ads-dashboard">
                     <section class="panel ads-card">
                         <div class="ads-panel-head">
-                            <h3>Ad library</h3>
-                            <button class="ads-add-btn" id="showAdFormBtn" type="button">
-                                <span>+</span> Add ad
-                            </button>
+                            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                                <h3 style="margin-right: 10px;">Ad library</h3>
+                                <button class="ads-add-btn mode-btn" data-mode="all" onclick="setAdMode('all')" style="background: var(--primary-color); border: 1px solid var(--primary-color); color: #fff; font-size: 0.8rem; padding: 4px 10px;">Play All</button>
+                                <button class="ads-add-btn mode-btn" data-mode="youtube_only" onclick="setAdMode('youtube_only')" style="background: transparent; border: 1px solid var(--border-color); color: var(--text-color); font-size: 0.8rem; padding: 4px 10px;">Play YT Vids</button>
+                                <button class="ads-add-btn mode-btn" data-mode="images_only" onclick="setAdMode('images_only')" style="background: transparent; border: 1px solid var(--border-color); color: var(--text-color); font-size: 0.8rem; padding: 4px 10px;">Play Imported Pics/Vids</button>
+                            </div>
+                            <div style="display: flex; gap: 8px;">
+                                <button class="ads-add-btn" id="nextAdCommandBtn" type="button" style="background: var(--border-color); color: var(--text-color); border-color: var(--border-color);" title="Force public display to play next ad">
+                                    Skip Next
+                                </button>
+                                <button class="ads-add-btn" id="showAdFormBtn" type="button">
+                                    <span>+</span> Add ad
+                                </button>
+                            </div>
                         </div>
 
                         <form class="ads-form" id="adForm" hidden>
@@ -268,6 +278,20 @@
                                             <p class="dropzone-subtext">Maximum file size: 50MB • Maximum files: 10</p>
                                         </div>
                                     </div>
+                                </div>
+
+                                <div style="margin: 20px 0; display: flex; align-items: center; justify-content: center; color: #a1a1aa; font-size: 13px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px;">
+                                    <hr style="flex: 1; border: none; border-top: 1px solid #e4e4e7; margin: 0 10px;">
+                                    OR
+                                    <hr style="flex: 1; border: none; border-top: 1px solid #e4e4e7; margin: 0 10px;">
+                                </div>
+                                
+                                <div class="youtube-input-group" style="margin-bottom: 20px;">
+                                    <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; margin-bottom: 8px; color: #3f3f46;">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="color: #ef4444;"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33 2.78 2.78 0 0 0 1.94 2c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.33 29 29 0 0 0-.46-5.33z"/><polygon fill="#fff" points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"/></svg>
+                                        YouTube Link
+                                    </label>
+                                    <input type="text" id="youtubeUrlInput" placeholder="https://www.youtube.com/watch?v=..." style="width: 100%; padding: 10px 12px; border: 1px solid #d4d4d8; border-radius: 6px; font-size: 14px; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#087447';" onblur="this.style.borderColor='#d4d4d8';">
                                 </div>
 
                                 <div class="upload-files-section" id="uploadFilesSection" hidden>
@@ -493,22 +517,79 @@
         // ----------------------------------------------------
         async function fetchAds() {
             try {
-                const response = await fetch('/api/ads');
-                const result = await response.json();
-                if (result.status === 'success') {
-                    return result.data;
-                }
-                return [];
+                const response = await fetch('/api/ads?_=' + new Date().getTime());
+                return await response.json();
             } catch (err) {
                 console.error('Error fetching ads', err);
-                return [];
+                return { status: 'error', data: [] };
             }
         }
 
         async function loadAds() {
-            adLibrary = await fetchAds();
+            const result = await fetchAds();
+            adLibrary = result.data || [];
+            
+            if (result.settings && result.settings.display_mode) {
+                window.currentAdMode = result.settings.display_mode;
+                document.querySelectorAll('.mode-btn').forEach(btn => {
+                    if (btn.dataset.mode === window.currentAdMode) {
+                        btn.style.background = 'var(--primary-color)';
+                        btn.style.color = '#fff';
+                        btn.style.borderColor = 'var(--primary-color)';
+                    } else {
+                        btn.style.background = 'transparent';
+                        btn.style.color = 'var(--text-color)';
+                        btn.style.borderColor = 'var(--border-color)';
+                    }
+                });
+            }
+
             renderAdsView();
             renderAdsPreview();
+        }
+
+        window.currentAdMode = 'all';
+
+        window.setAdMode = async function(mode) {
+            window.currentAdMode = mode;
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                if (btn.dataset.mode === mode) {
+                    btn.style.background = 'var(--primary-color)';
+                    btn.style.color = '#fff';
+                    btn.style.borderColor = 'var(--primary-color)';
+                } else {
+                    btn.style.background = 'transparent';
+                    btn.style.color = 'var(--text-color)';
+                    btn.style.borderColor = 'var(--border-color)';
+                }
+            });
+
+            try {
+                const response = await fetch('/api/ads/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ display_mode: mode })
+                });
+                renderAdsPreview(); // Update instantly
+            } catch (err) {
+                console.error('Error updating display mode', err);
+            }
+        };
+
+        async function sendCommand(action, adId = null) {
+            try {
+                const response = await fetch('/api/ads/command', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: action, ad_id: adId })
+                });
+                const result = await response.json();
+                if (result.status !== 'success') {
+                    showAlert('Failed to send command: ' + (result.message || 'Unknown error'));
+                }
+            } catch (err) {
+                console.error('Error sending command', err);
+            }
         }
 
         function deleteAd(id) {
@@ -952,67 +1033,92 @@
         function renderManageQueue() {
             const manageGrid = document.getElementById('manageGrid');
             if (!manageGrid) return;
-            
-            manageGrid.innerHTML = Object.entries(procedures).map(([key, procedure]) => {
+
+            // Map room-specific accounts to their allowed procedure key and slot
+            const roomMap = {
+                'X-Ray 1': { key: 'xray', slot: 0 },
+                'X-Ray 2': { key: 'xray', slot: 1 },
+                'Ultrasound 1': { key: 'ultrasound', slot: 0 },
+                'Ultrasound 2': { key: 'ultrasound', slot: 1 },
+                'CT Scan': { key: 'ctscan', slot: 0 }
+            };
+            const myRoom = roomMap[currentUserName] || null;
+
+            if (myRoom) {
+                manageGrid.style.display = 'flex';
+                manageGrid.style.justifyContent = 'center';
+                manageGrid.style.alignItems = 'center';
+                manageGrid.style.minHeight = '70vh';
+            } else {
+                manageGrid.style.display = '';
+                manageGrid.style.justifyContent = '';
+                manageGrid.style.alignItems = '';
+                manageGrid.style.minHeight = '';
+            }
+
+            manageGrid.innerHTML = Object.entries(procedures)
+                .filter(([key]) => {
+                    // Room-specific accounts only see their assigned procedure
+                    if (myRoom) return key === myRoom.key;
+                    return true;
+                })
+                .map(([key, procedure]) => {
                 const servingList = state.serving[key];
                 const waiting = state.queues[key];
                 const maxSlots = procedure.maxServing || 1;
                 const servingSlots = Array.from({ length: maxSlots }, (_, index) => servingList[index] || null);
                 const servingCount = servingSlots.filter(Boolean).length;
 
-                const servingHtml = servingSlots.map((ticket, slotIndex) => {
-                    const slotLabel = key === 'xray'
-                        ? `Xray ${slotIndex + 1}`
-                        : `${procedure.name}${maxSlots > 1 ? ` ${slotIndex + 1}` : ''}`;
+                const servingHtml = servingSlots
+                    .map((ticket, slotIndex) => {
+                        // Room-specific accounts only see their assigned slot
+                        if (myRoom && slotIndex !== myRoom.slot) return '';
 
-                    const isRoomRestricted = (() => {
-                        const roomMap = {
-                            'X-Ray 1': { key: 'xray', slot: 0 },
-                            'X-Ray 2': { key: 'xray', slot: 1 },
-                            'Ultrasound 1': { key: 'ultrasound', slot: 0 },
-                            'Ultrasound 2': { key: 'ultrasound', slot: 1 },
-                            'CT Scan': { key: 'ctscan', slot: 0 }
-                        };
-                        if (roomMap[currentUserName]) {
-                            const allowed = roomMap[currentUserName];
-                            return allowed.key !== key || allowed.slot !== slotIndex;
-                        }
-                        return false;
-                    })();
+                        const slotLabel = key === 'xray'
+                            ? `Xray ${slotIndex + 1}`
+                            : `${procedure.name}${maxSlots > 1 ? ` ${slotIndex + 1}` : ''}`;
 
-                    return `
-                        <div class="rqs-serving-slot" id="${key}-${slotIndex + 1}">
-                            <div class="rqs-slot-label">${slotLabel}</div>
-                            <div class="rqs-serving-hero proc-${key}">
-                                ${ticket ? `
-                                    <div class="label">Now serving</div>
-                                    <div class="num rqs-num">${ticket.id}</div>
-                                    <span class="category-badge">${ticket.patientType}</span>
-                                ` : `
-                                    <div class="none">No patient being served</div>
-                                `}
+                        return `
+                            <div class="rqs-serving-slot" id="${key}-${slotIndex + 1}">
+                                <div class="rqs-slot-label">${slotLabel}</div>
+                                <div class="rqs-serving-hero proc-${key}">
+                                    ${ticket ? `
+                                        <div class="label">Now serving</div>
+                                        <div class="num rqs-num">${ticket.id}</div>
+                                        <span class="category-badge">${ticket.patientType}</span>
+                                    ` : `
+                                        <div class="none">No patient being served</div>
+                                    `}
+                                </div>
+                                <div class="rqs-action-row">
+                                    <button class="secondary-action" type="button" ${ticket ? '' : 'disabled'} onclick="completePatient('${key}', ${slotIndex})">
+                                        <span class="check-icon"></span> Complete
+                                    </button>
+                                    <button class="primary-action small" type="button" ${(!ticket && waiting.length > 0) ? '' : 'disabled'} onclick="callNext('${key}', ${slotIndex})">
+                                        <span class="call-icon"></span> Call next
+                                    </button>
+                                </div>
                             </div>
-                            <div class="rqs-action-row">
-                                <button class="secondary-action" type="button" ${ticket && !isRoomRestricted ? '' : 'disabled'} onclick="completePatient('${key}', ${slotIndex})">
-                                    <span class="check-icon"></span> Complete
-                                </button>
-                                <button class="primary-action small" type="button" ${(!ticket && waiting.length > 0 && !isRoomRestricted) ? '' : 'disabled'} onclick="callNext('${key}', ${slotIndex})">
-                                    <span class="call-icon"></span> Call next
-                                </button>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
+                        `;
+                    }).join('');
+
+                // Room-specific accounts: hide the waiting list, only show their slot
+                const showWaitingList = !myRoom;
+
+                const cardStyle = myRoom 
+                    ? 'padding: 24px; width: 100%; max-width: 460px; transform: scale(1.3); transform-origin: center; box-shadow: 0 20px 40px rgba(0,0,0,0.1);' 
+                    : 'padding: 18px;';
 
                 return `
-                    <section class="panel rqs-exam-col manage-card" style="padding: 18px;">
+                    <section class="panel rqs-exam-col manage-card" style="${cardStyle}">
                         <div class="rqs-exam-header">
                             <h3>${procedure.name}</h3>
-                            <span class="rqs-count-chip">${waiting.length} waiting${maxSlots > 1 ? ` · ${servingCount}/${maxSlots} slots` : ''}</span>
+                            <span class="rqs-count-chip">${waiting.length} waiting${maxSlots > 1 && !myRoom ? ` · ${servingCount}/${maxSlots} slots` : ''}</span>
                         </div>
 
                         ${servingHtml}
 
+                        ${showWaitingList ? `
                         <div>
                             <p class="rqs-group-label" style="margin-bottom: 8px; font-size: 12px; font-weight: 800; color: #59645e; text-transform: uppercase;">Waiting list</p>
                             ${waiting.length === 0 ? `
@@ -1029,6 +1135,7 @@
                                 </div>
                             `}
                         </div>
+                        ` : ''}
                     </section>
                 `;
             }).join('');
@@ -1284,20 +1391,36 @@
 
             list.innerHTML = adLibrary.map((ad) => {
                 const isVideo = (ad.type || '').startsWith('video/');
+                const isYoutube = ad.type === 'youtube';
+                
+                let thumbHtml = '';
+                if (isYoutube) {
+                    let videoId = '';
+                    const match = ad.src.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&?]+)/);
+                    if (match) videoId = match[1];
+                    thumbHtml = videoId ? `<img src="https://img.youtube.com/vi/${videoId}/default.jpg" alt="YouTube Thumbnail">` : `<div style="background:#000;width:100%;height:100%;"></div>`;
+                } else if (isVideo) {
+                    thumbHtml = `<video src="${ad.src}" muted playsinline></video>`;
+                } else {
+                    thumbHtml = `<img src="${ad.src}" alt="${escapeHtml(ad.name)}">`;
+                }
+
                 return `
                     <div class="ad-row">
                         <span class="ad-grip">::</span>
                         <div class="ad-thumb">
-                            ${isVideo
-                                ? `<video src="${ad.src}" muted playsinline></video>`
-                                : `<img src="${ad.src}" alt="${escapeHtml(ad.name)}">`
-                            }
-                            <span>${isVideo ? '▶' : '▧'}</span>
+                            ${thumbHtml}
+                            <span>${(isVideo || isYoutube) ? '▶' : '▧'}</span>
                         </div>
                         <div class="ad-main">
                             <strong>${escapeHtml(ad.name)}</strong>
-                            <small>${ad.duration}s on screen</small>
+                            <small>${isYoutube ? 'Auto - Plays until video ends (YouTube)' : ad.duration + 's on screen'}</small>
                         </div>
+                        <button class="ads-icon-btn btn-play-ad" type="button" onclick="sendCommand('play_ad', ${ad.id})" aria-label="Play now" title="Play on Screen Now">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                            </svg>
+                        </button>
                         <button class="ads-icon-btn btn-delete-ad" type="button" onclick="deleteAd(${ad.id})" aria-label="Delete ad" title="Remove Advertisement">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <polyline points="3 6 5 6 21 6"></polyline>
@@ -1317,11 +1440,20 @@
             const fileNote = document.getElementById('adFileNote');
             const durationInput = document.getElementById('adDurationInput');
             const activeInput = document.getElementById('adActiveInput');
+            const ytInput = document.getElementById('youtubeUrlInput');
+            
             selectedAdFile = null;
             selectedAdDataUrl = '';
+            
             if (fileInput) fileInput.value = '';
             if (fileNote) fileNote.textContent = 'No file selected.';
-            if (durationInput) durationInput.value = 8;
+            if (durationInput) {
+                durationInput.value = 8;
+                durationInput.disabled = false;
+                const durLabel = durationInput.closest('label').querySelector('span');
+                if (durLabel) durLabel.textContent = 'Seconds on screen';
+            }
+            if (ytInput) ytInput.value = '';
             if (activeInput) activeInput.checked = true;
             if (form) form.hidden = true;
         }
@@ -1336,26 +1468,53 @@
 
         // The deleteAd function is defined above
 
+
         function renderAdsPreview() {
             const stage = document.getElementById('adsPreviewStage');
             if (!stage) return;
             clearTimeout(adsPreviewTimer);
+            if (window.ytPreviewCheckInterval) clearInterval(window.ytPreviewCheckInterval);
+            if (window.currentYtPreviewPlayer && typeof window.currentYtPreviewPlayer.destroy === 'function') {
+                try { window.currentYtPreviewPlayer.destroy(); } catch (e) {}
+            }
+            window.currentYtPreviewPlayer = null;
 
-            const activeAds = adLibrary.filter((ad) => ad.active);
+            let activeAds = adLibrary.filter((ad) => ad.active);
+            if (window.currentAdMode === 'images_only') {
+                activeAds = activeAds.filter(ad => ad.type !== 'youtube');
+            } else if (window.currentAdMode === 'youtube_only') {
+                activeAds = activeAds.filter(ad => ad.type === 'youtube');
+            }
+
             if (!activeAds.length) {
-                stage.innerHTML = '<div class="ads-preview-empty">No active ads yet.</div>';
+                stage.innerHTML = '<div class="ads-preview-empty">No active ads yet for this mode.</div>';
                 return;
             }
 
             if (adsPreviewIndex >= activeAds.length) adsPreviewIndex = 0;
             const ad = activeAds[adsPreviewIndex];
             const isVideo = (ad.type || '').startsWith('video/');
+            const isYoutube = ad.type === 'youtube';
+
+            let mediaHtml = '';
+            if (isYoutube) {
+                let videoId = '';
+                const match = ad.src.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&?]+)/);
+                if (match) videoId = match[1];
+                if (videoId) {
+                    mediaHtml = `<iframe id="yt-preview-display" class="ads-preview-media" src="https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&controls=1&showinfo=0&rel=0&enablejsapi=1" frameborder="0" allow="autoplay; encrypted-media" style="width: 100%; height: auto; aspect-ratio: 16/9; max-height: 100%; background: #000; pointer-events: auto;"></iframe>`;
+                } else {
+                    mediaHtml = `<div style="background:#000;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#fff;">Invalid YouTube Link</div>`;
+                }
+            } else if (isVideo) {
+                mediaHtml = `<video class="ads-preview-media" src="${ad.src}" autoplay muted playsinline></video>`;
+            } else {
+                mediaHtml = `<img class="ads-preview-media" src="${ad.src}" alt="${escapeHtml(ad.name)}">`;
+            }
+
             stage.innerHTML = `
                 <div class="ads-preview-brand"><span>A+</span> TAGUM GLOBAL</div>
-                ${isVideo
-                    ? `<video class="ads-preview-media" src="${ad.src}" autoplay muted playsinline></video>`
-                    : `<img class="ads-preview-media" src="${ad.src}" alt="${escapeHtml(ad.name)}">`
-                }
+                ${mediaHtml}
                 <div class="ads-preview-dot"></div>
             `;
 
@@ -1364,9 +1523,32 @@
                 renderAdsPreview();
             };
 
-            if (isVideo) {
+            if (isYoutube) {
+                if (videoId) {
+                    if (!window.YT) {
+                        const tag = document.createElement('script');
+                        tag.src = "https://www.youtube.com/iframe_api";
+                        const firstScriptTag = document.getElementsByTagName('script')[0];
+                        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+                    }
+                    window.ytPreviewCheckInterval = setInterval(() => {
+                        if (window.YT && window.YT.Player) {
+                            clearInterval(window.ytPreviewCheckInterval);
+                            window.currentYtPreviewPlayer = new YT.Player('yt-preview-display', {
+                                events: {
+                                    'onStateChange': (event) => {
+                                        if (event.data === 0) {
+                                            next();
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                    }, 100);
+                }
+            } else if (isVideo) {
                 const video = stage.querySelector('video');
-                video.onended = next;
+                if (video) video.onended = next;
                 adsPreviewTimer = setTimeout(next, Math.max(3, ad.duration || 8) * 1000);
             } else {
                 adsPreviewTimer = setTimeout(next, Math.max(3, ad.duration || 8) * 1000);
@@ -1402,6 +1584,21 @@
             const filesSection = document.getElementById('uploadFilesSection');
             const filesGrid = document.getElementById('uploadFilesGrid');
             const filesCountHeader = document.getElementById('filesCountHeader');
+
+            const ytUrlInput = document.getElementById('youtubeUrlInput');
+            const durInput = document.getElementById('adDurationInput');
+            if (ytUrlInput && durInput) {
+                ytUrlInput.addEventListener('input', () => {
+                    const durLabel = durInput.closest('label').querySelector('span');
+                    if (ytUrlInput.value.trim().length > 0) {
+                        durInput.disabled = true;
+                        durLabel.textContent = 'Duration (Auto - Plays until video ends)';
+                    } else {
+                        durInput.disabled = false;
+                        durLabel.textContent = 'Seconds on screen';
+                    }
+                });
+            }
             
             let uploadFilesQueue = []; // Array of { file, id, preview, status, progress }
 
@@ -1502,6 +1699,15 @@
                 adForm.hidden = false;
             });
             
+            const nextAdCommandBtn = document.getElementById('nextAdCommandBtn');
+            if (nextAdCommandBtn) {
+                nextAdCommandBtn.addEventListener('click', () => {
+                    sendCommand('next_ad');
+                });
+            }
+
+
+            
             function resetAdForm() {
                 adForm.hidden = true;
                 uploadFilesQueue = [];
@@ -1514,8 +1720,12 @@
 
             document.getElementById('saveAdBtn').addEventListener('click', async (event) => {
                 event.preventDefault();
-                if (uploadFilesQueue.length === 0) {
-                    showAlert('Please choose at least one image or video first.');
+                
+                const ytUrlInput = document.getElementById('youtubeUrlInput');
+                const hasYoutube = ytUrlInput && ytUrlInput.value.trim() !== '';
+
+                if (!hasYoutube && uploadFilesQueue.length === 0) {
+                    showAlert('Please choose at least one image or video, or enter a YouTube link.');
                     return;
                 }
 
@@ -1527,34 +1737,55 @@
                 const duration = Math.max(3, Math.min(60, Number(document.getElementById('adDurationInput').value) || 8));
                 const active = document.getElementById('adActiveInput').checked;
 
-                for (let i = 0; i < uploadFilesQueue.length; i++) {
-                    const item = uploadFilesQueue[i];
-                    item.status = 'uploading';
-                    item.progress = 30; // simulated start progress
-                    renderUploadFiles();
-
+                if (hasYoutube) {
                     const formData = new FormData();
-                    formData.append('media', item.file);
+                    formData.append('youtube_url', ytUrlInput.value.trim());
                     formData.append('duration', duration);
                     formData.append('active', active);
 
                     try {
                         const response = await fetch('/api/ads', { method: 'POST', body: formData });
                         const result = await response.json();
-                        item.progress = 100;
-                        renderUploadFiles();
                         if (result.status !== 'success') {
-                            console.error('Upload failed for', item.file.name, result.message);
+                            showAlert('Failed to save YouTube link: ' + result.message);
                         }
                     } catch (err) {
-                        console.error('Upload error for', item.file.name, err);
+                        console.error('Error saving YouTube link', err);
+                    }
+                } else {
+                    for (let i = 0; i < uploadFilesQueue.length; i++) {
+                        const item = uploadFilesQueue[i];
+                        item.status = 'uploading';
+                        item.progress = 30; // simulated start progress
+                        renderUploadFiles();
+
+                        const formData = new FormData();
+                        formData.append('media', item.file);
+                        formData.append('duration', duration);
+                        formData.append('active', active);
+
+                        try {
+                            const response = await fetch('/api/ads', { method: 'POST', body: formData });
+                            const result = await response.json();
+                            item.progress = 100;
+                            renderUploadFiles();
+                            if (result.status !== 'success') {
+                                console.error('Upload failed for', item.file.name, result.message);
+                            }
+                        } catch (err) {
+                            console.error('Upload error for', item.file.name, err);
+                        }
                     }
                 }
 
                 submitBtn.textContent = originalText;
                 submitBtn.disabled = false;
+                if (ytUrlInput) ytUrlInput.value = '';
                 resetAdForm();
-                fetchAds();
+                fetchAds().then(res => {
+                    adLibrary = res;
+                    renderAdsView();
+                });
             });
         }
 

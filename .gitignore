@@ -1,0 +1,21 @@
+# Environment
+.env
+
+# Dependencies
+/vendor/
+
+# Storage (keep structure, ignore contents)
+/storage/logs/*
+!/storage/logs/.gitkeep
+/storage/uploads/*
+!/storage/uploads/.gitkeep
+/public/storage/uploads/*
+!/public/storage/uploads/.gitkeep
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+*.swo
+Thumbs.db
+.DS_Store

@@ -40,7 +40,7 @@ class TicketController
             echo json_encode(['status' => 'success', 'ticket' => $ticket]);
         } catch (\Exception $e) {
             http_response_code(500);
-            echo json_encode(['error' => 'Failed to generate ticket', 'message' => $e->getMessage()]);
+            echo json_encode(['error' => 'Failed to generate ticket: ' . $e->getMessage()]);
         }
     }
 }

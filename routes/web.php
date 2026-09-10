@@ -18,6 +18,8 @@ $router->get('/api/reports/tickets', [\App\Controllers\ReportController::class, 
 $router->get('/api/ads', [\App\Controllers\AdvertisementController::class, 'index']);
 $router->post('/api/ads', [\App\Controllers\AdvertisementController::class, 'store']);
 $router->post('/api/ads/delete', [\App\Controllers\AdvertisementController::class, 'destroy']);
+$router->post('/api/ads/command', [\App\Controllers\AdvertisementController::class, 'command']);
+$router->post('/api/ads/settings', [\App\Controllers\AdvertisementController::class, 'settings']);
 $router->get('/login', [\App\Controllers\AuthController::class, 'showLogin']);
 $router->post('/login', [\App\Controllers\AuthController::class, 'processLogin']);
 $router->post('/logout', [\App\Controllers\AuthController::class, 'logout']);
