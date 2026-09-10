@@ -184,14 +184,14 @@ $pageData = $pageData ?? include __DIR__ . '/../data/public-display-data.php';
             
             const isVideo = (ad.type || '').startsWith('video/');
             const isYoutube = ad.type === 'youtube';
+            let videoId = '';
 
             if (isYoutube) {
-                let videoId = '';
                 const match = ad.src.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&?]+)/);
                 if (match) videoId = match[1];
 
                 if (videoId) {
-                    container.innerHTML = `<iframe id="yt-player-display" class="display-ad-media active" src="https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&controls=1&showinfo=0&rel=0&enablejsapi=1" frameborder="0" allow="autoplay; encrypted-media" style="width: 100%; height: auto; aspect-ratio: 16/9; max-height: 100%; background: #000; pointer-events: auto;"></iframe>`;
+                    container.innerHTML = `<div id="yt-player-display" class="display-ad-media active" style="width:100%;height:auto;aspect-ratio:16/9;max-height:100%;background:#000;"></div>`;
                 } else {
                     container.innerHTML = `<div class="empty-ad-placeholder" style="display:flex;align-items:center;justify-content:center;height:100%;background:#000;color:#fff;">Invalid YouTube Link</div>`;
                 }
@@ -211,7 +211,7 @@ $pageData = $pageData ?? include __DIR__ . '/../data/public-display-data.php';
 
             if (isYoutube) {
                 if (videoId) {
-                    if (!window.YT) {
+                    if (!(window.YT && window.YT.Player) && !document.querySelector('script[src="https://www.youtube.com/iframe_api"]')) {
                         const tag = document.createElement('script');
                         tag.src = "https://www.youtube.com/iframe_api";
                         const firstScriptTag = document.getElementsByTagName('script')[0];
@@ -221,11 +221,18 @@ $pageData = $pageData ?? include __DIR__ . '/../data/public-display-data.php';
                         if (window.YT && window.YT.Player) {
                             clearInterval(window.ytCheckInterval);
                             window.currentYtPlayer = new YT.Player('yt-player-display', {
+                                videoId,
+                                playerVars: { autoplay: 1, playsinline: 1, controls: 1, rel: 0, origin: window.location.origin },
                                 events: {
                                     'onReady': (event) => {
+                                        event.target.playVideo();
                                         if (window.speechSynthesis && (window.speechSynthesis.pending || window.speechSynthesis.speaking)) {
                                             event.target.mute();
                                         }
+                                    },
+                                    'onAutoplayBlocked': (event) => {
+                                        event.target.mute();
+                                        event.target.playVideo();
                                     },
                                     'onStateChange': (event) => {
                                         if (event.data === 0) { // YT.PlayerState.ENDED
@@ -240,7 +247,7 @@ $pageData = $pageData ?? include __DIR__ . '/../data/public-display-data.php';
             } else if (isVideo) {
                 const video = container.querySelector('video');
                 if (video) video.onended = next;
-                publicAdTimer = setTimeout(next, Math.max(3, ad.duration || 8) * 1000);
+
             } else {
                 publicAdTimer = setTimeout(next, Math.max(3, ad.duration || 8) * 1000);
             }

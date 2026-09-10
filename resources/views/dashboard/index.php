@@ -244,9 +244,6 @@
                         <div class="ads-panel-head">
                             <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
                                 <h3 style="margin-right: 10px;">Ad library</h3>
-                                <button class="ads-add-btn mode-btn" data-mode="all" onclick="setAdMode('all')" style="background: var(--primary-color); border: 1px solid var(--primary-color); color: #fff; font-size: 0.8rem; padding: 4px 10px;">Play All</button>
-                                <button class="ads-add-btn mode-btn" data-mode="youtube_only" onclick="setAdMode('youtube_only')" style="background: transparent; border: 1px solid var(--border-color); color: var(--text-color); font-size: 0.8rem; padding: 4px 10px;">Play YT Vids</button>
-                                <button class="ads-add-btn mode-btn" data-mode="images_only" onclick="setAdMode('images_only')" style="background: transparent; border: 1px solid var(--border-color); color: var(--text-color); font-size: 0.8rem; padding: 4px 10px;">Play Imported Pics/Vids</button>
                             </div>
                             <div style="display: flex; gap: 8px;">
                                 <button class="ads-add-btn" id="nextAdCommandBtn" type="button" style="background: var(--border-color); color: var(--text-color); border-color: var(--border-color);" title="Force public display to play next ad">
@@ -328,7 +325,7 @@
                             </div>
 
                             <div class="ads-form-actions">
-                                <button class="ads-save-btn" id="saveAdBtn" type="button">Upload all</button>
+                                <button class="ads-save-btn" id="saveAdBtn" type="button">Upload</button>
                                 <button class="ads-cancel-btn" id="cancelAdFormBtn2" type="button">Cancel</button>
                             </div>
                         </form>
@@ -1416,7 +1413,7 @@
                             <strong>${escapeHtml(ad.name)}</strong>
                             <small>${isYoutube ? 'Auto - Plays until video ends (YouTube)' : ad.duration + 's on screen'}</small>
                         </div>
-                        <button class="ads-icon-btn btn-play-ad" type="button" onclick="sendCommand('play_ad', ${ad.id})" aria-label="Play now" title="Play on Screen Now">
+                        <button class="ads-icon-btn btn-play-ad" type="button" onclick="playSelectedAd(${ad.id})" aria-label="Play this ad" title="Play this ad">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <polygon points="5 3 19 12 5 21 5 3"></polygon>
                             </svg>
@@ -1469,6 +1466,37 @@
         // The deleteAd function is defined above
 
 
+        function getActivePreviewAds() {
+            let activeAds = adLibrary.filter((ad) => ad.active);
+            if (window.currentAdMode === 'images_only') {
+                activeAds = activeAds.filter(ad => ad.type !== 'youtube');
+            } else if (window.currentAdMode === 'youtube_only') {
+                activeAds = activeAds.filter(ad => ad.type === 'youtube');
+            }
+            return activeAds;
+        }
+
+        async function playSelectedAd(adId) {
+            const ad = adLibrary.find(ad => ad.id == adId);
+            if (!ad) return;
+            if (!ad.active) {
+                showAlert('This ad must be active before it can play on the public display.');
+                return;
+            }
+            if (!getActivePreviewAds().some(ad => ad.id == adId)) {
+                await window.setAdMode('all');
+            }
+            adsPreviewIndex = getActivePreviewAds().findIndex(ad => ad.id == adId);
+            renderAdsPreview();
+            await sendCommand('play_ad', adId);
+        }
+
+        function playNextAd() {
+            adsPreviewIndex += 1;
+            const adId = renderAdsPreview();
+            if (adId != null) sendCommand('play_ad', adId);
+        }
+
         function renderAdsPreview() {
             const stage = document.getElementById('adsPreviewStage');
             if (!stage) return;
@@ -1479,12 +1507,7 @@
             }
             window.currentYtPreviewPlayer = null;
 
-            let activeAds = adLibrary.filter((ad) => ad.active);
-            if (window.currentAdMode === 'images_only') {
-                activeAds = activeAds.filter(ad => ad.type !== 'youtube');
-            } else if (window.currentAdMode === 'youtube_only') {
-                activeAds = activeAds.filter(ad => ad.type === 'youtube');
-            }
+            const activeAds = getActivePreviewAds();
 
             if (!activeAds.length) {
                 stage.innerHTML = '<div class="ads-preview-empty">No active ads yet for this mode.</div>';
@@ -1497,12 +1520,12 @@
             const isYoutube = ad.type === 'youtube';
 
             let mediaHtml = '';
+            let videoId = '';
             if (isYoutube) {
-                let videoId = '';
                 const match = ad.src.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&?]+)/);
                 if (match) videoId = match[1];
                 if (videoId) {
-                    mediaHtml = `<iframe id="yt-preview-display" class="ads-preview-media" src="https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&controls=1&showinfo=0&rel=0&enablejsapi=1" frameborder="0" allow="autoplay; encrypted-media" style="width: 100%; height: auto; aspect-ratio: 16/9; max-height: 100%; background: #000; pointer-events: auto;"></iframe>`;
+                    mediaHtml = `<div id="yt-preview-display" class="ads-preview-media" style="width:100%;height:auto;aspect-ratio:16/9;max-height:100%;background:#000;"></div>`;
                 } else {
                     mediaHtml = `<div style="background:#000;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#fff;">Invalid YouTube Link</div>`;
                 }
@@ -1525,7 +1548,7 @@
 
             if (isYoutube) {
                 if (videoId) {
-                    if (!window.YT) {
+                    if (!(window.YT && window.YT.Player) && !document.querySelector('script[src="https://www.youtube.com/iframe_api"]')) {
                         const tag = document.createElement('script');
                         tag.src = "https://www.youtube.com/iframe_api";
                         const firstScriptTag = document.getElementsByTagName('script')[0];
@@ -1535,7 +1558,13 @@
                         if (window.YT && window.YT.Player) {
                             clearInterval(window.ytPreviewCheckInterval);
                             window.currentYtPreviewPlayer = new YT.Player('yt-preview-display', {
+                                videoId,
+                                playerVars: { autoplay: 1, playsinline: 1, controls: 1, rel: 0, origin: window.location.origin },
                                 events: {
+                                    'onAutoplayBlocked': (event) => {
+                                        event.target.mute();
+                                        event.target.playVideo();
+                                    },
                                     'onStateChange': (event) => {
                                         if (event.data === 0) {
                                             next();
@@ -1549,10 +1578,11 @@
             } else if (isVideo) {
                 const video = stage.querySelector('video');
                 if (video) video.onended = next;
-                adsPreviewTimer = setTimeout(next, Math.max(3, ad.duration || 8) * 1000);
+
             } else {
                 adsPreviewTimer = setTimeout(next, Math.max(3, ad.duration || 8) * 1000);
             }
+            return ad.id;
         }
 
         const startDateFilter = document.getElementById('startDateFilter');
@@ -1589,6 +1619,7 @@
             const durInput = document.getElementById('adDurationInput');
             if (ytUrlInput && durInput) {
                 ytUrlInput.addEventListener('input', () => {
+                    updateUploadButtonLabel();
                     const durLabel = durInput.closest('label').querySelector('span');
                     if (ytUrlInput.value.trim().length > 0) {
                         durInput.disabled = true;
@@ -1602,7 +1633,15 @@
             
             let uploadFilesQueue = []; // Array of { file, id, preview, status, progress }
 
+            function updateUploadButtonLabel() {
+                const button = document.getElementById('saveAdBtn');
+                if (button.disabled) return;
+                const hasYoutube = ytUrlInput && ytUrlInput.value.trim() !== '';
+                button.textContent = !hasYoutube && uploadFilesQueue.length > 1 ? 'Upload all' : 'Upload';
+            }
+
             function renderUploadFiles() {
+                updateUploadButtonLabel();
                 if (uploadFilesQueue.length === 0) {
                     filesSection.hidden = true;
                     if (fileInput) fileInput.value = ''; // Allow re-selecting the same file
@@ -1701,9 +1740,7 @@
             
             const nextAdCommandBtn = document.getElementById('nextAdCommandBtn');
             if (nextAdCommandBtn) {
-                nextAdCommandBtn.addEventListener('click', () => {
-                    sendCommand('next_ad');
-                });
+                nextAdCommandBtn.addEventListener('click', playNextAd);
             }
 
 
@@ -1736,6 +1773,7 @@
 
                 const duration = Math.max(3, Math.min(60, Number(document.getElementById('adDurationInput').value) || 8));
                 const active = document.getElementById('adActiveInput').checked;
+                let uploadFailed = false;
 
                 if (hasYoutube) {
                     const formData = new FormData();
@@ -1746,10 +1784,13 @@
                     try {
                         const response = await fetch('/api/ads', { method: 'POST', body: formData });
                         const result = await response.json();
-                        if (result.status !== 'success') {
-                            showAlert('Failed to save YouTube link: ' + result.message);
+                        if (!response.ok || result.status !== 'success') {
+                            uploadFailed = true;
+                            showAlert('Failed to save YouTube link: ' + (result.error || result.message || 'Please try again.'));
                         }
                     } catch (err) {
+                        uploadFailed = true;
+                        showAlert('Unable to save the YouTube link. Please try again.');
                         console.error('Error saving YouTube link', err);
                     }
                 } else {
@@ -1769,10 +1810,15 @@
                             const result = await response.json();
                             item.progress = 100;
                             renderUploadFiles();
-                            if (result.status !== 'success') {
-                                console.error('Upload failed for', item.file.name, result.message);
+                            if (!response.ok || result.status !== 'success') {
+                                uploadFailed = true;
+                                showAlert('Failed to upload ' + item.file.name + ': ' + (result.error || result.message || 'Please try again.'));
+                            } else {
+                                item.status = 'complete';
                             }
                         } catch (err) {
+                            uploadFailed = true;
+                            showAlert('Unable to upload ' + item.file.name + '. Please try again.');
                             console.error('Upload error for', item.file.name, err);
                         }
                     }
@@ -1780,12 +1826,14 @@
 
                 submitBtn.textContent = originalText;
                 submitBtn.disabled = false;
-                if (ytUrlInput) ytUrlInput.value = '';
-                resetAdForm();
-                fetchAds().then(res => {
-                    adLibrary = res;
-                    renderAdsView();
-                });
+                if (uploadFailed) {
+                    uploadFilesQueue = uploadFilesQueue.filter(item => item.status !== 'complete');
+                    renderUploadFiles();
+                } else {
+                    if (ytUrlInput) ytUrlInput.value = '';
+                    resetAdForm();
+                }
+                await loadAds();
             });
         }
 

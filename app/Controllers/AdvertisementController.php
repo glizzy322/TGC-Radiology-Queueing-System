@@ -95,7 +95,7 @@ class AdvertisementController
         $cmdData = [
             'action' => $input['action'],
             'ad_id' => $input['ad_id'] ?? null,
-            'timestamp' => time()
+            'timestamp' => microtime(true)
         ];
         
         $commandFile = __DIR__ . '/../../storage/ad_command.json';
