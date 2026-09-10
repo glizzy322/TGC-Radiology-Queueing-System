@@ -11,6 +11,7 @@ $pageData = include __DIR__ . '/../data/public-display-data.php';
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/public-display.css">
+    <script src="/js/background-playback.js"></script>
 </head>
 <body>
     <?php include __DIR__ . '/../partials/public-display-content.php'; ?>

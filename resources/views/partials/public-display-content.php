@@ -116,6 +116,10 @@ $pageData = $pageData ?? include __DIR__ . '/../data/public-display-data.php';
         let publicAdIndex = 0;
         let publicAdTimer = null;
         let publicAdsSignature = '';
+        const displayPlayback = createBackgroundPlayback();
+        let currentDisplayAd = null;
+        let currentDisplayStartedAt = 0;
+        let playbackReportInFlight = false;
         const procedures = {
             xray: { title: 'X-RAY', spokenName: 'X-Ray', codeClass: 'XR', maxServing: 2 },
             ultrasound: { title: 'Ultrasound', spokenName: 'Ultrasound', codeClass: 'UT', maxServing: 2 },
@@ -156,6 +160,83 @@ $pageData = $pageData ?? include __DIR__ . '/../data/public-display-data.php';
         // ----------------------------------------------------
         let lastCommandTimestamp = 0;
 
+        async function reportDisplayPlayback() {
+            if (!currentDisplayAd || playbackReportInFlight) return;
+
+            const position = Math.max(0, (Date.now() - currentDisplayStartedAt) / 1000);
+            const mediaType = currentDisplayAd.type === 'youtube'
+                ? 'youtube'
+                : ((currentDisplayAd.type || '').startsWith('video/') ? 'video' : 'image');
+            let duration = mediaType === 'image'
+                ? Math.max(3, Number(currentDisplayAd.duration) || 8)
+                : 0;
+
+            if (mediaType === 'video') {
+                const video = document.querySelector('.slideshow-container video');
+                if (video && Number.isFinite(video.duration)) duration = video.duration;
+            } else if (mediaType === 'youtube' && window.currentYtPlayer) {
+                try {
+                    duration = Number(window.currentYtPlayer.getDuration()) || 0;
+                } catch (error) {}
+            }
+
+            // The display timeline keeps moving even if the browser throttles a hidden tab.
+            if (duration > 0 && position >= duration && window.forceNextAd) {
+                window.forceNextAd();
+                return;
+            }
+
+            playbackReportInFlight = true;
+            try {
+                await fetch('/api/ads/playback', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    cache: 'no-store',
+                    body: JSON.stringify({
+                        ad_id: currentDisplayAd.id,
+                        position,
+                        playing: true,
+                        media_type: mediaType
+                    })
+                });
+            } catch (error) {
+                console.warn('Unable to publish display playback.', error);
+            } finally {
+                playbackReportInFlight = false;
+            }
+        }
+
+        function catchUpDisplayPlayback() {
+            if (!currentDisplayAd) return;
+            const targetTime = Math.max(0, (Date.now() - currentDisplayStartedAt) / 1000);
+            const video = document.querySelector('.slideshow-container video');
+
+            if (video && Number.isFinite(video.duration)) {
+                if (targetTime >= video.duration) {
+                    if (window.forceNextAd) window.forceNextAd();
+                    return;
+                }
+                if (Math.abs(video.currentTime - targetTime) > 1) video.currentTime = targetTime;
+                if (video.paused) video.play().catch(() => {});
+                return;
+            }
+
+            const youtube = window.currentYtPlayer;
+            if (currentDisplayAd.type === 'youtube' && youtube && typeof youtube.getCurrentTime === 'function') {
+                try {
+                    const duration = Number(youtube.getDuration()) || 0;
+                    if (duration > 0 && targetTime >= duration) {
+                        if (window.forceNextAd) window.forceNextAd();
+                        return;
+                    }
+                    if (Math.abs(youtube.getCurrentTime() - targetTime) > 1) {
+                        youtube.seekTo(targetTime, true);
+                    }
+                    youtube.playVideo();
+                } catch (error) {}
+            }
+        }
+
         async function fetchAds() {
             try {
                 const response = await fetch('/api/ads?_=' + new Date().getTime(), { cache: 'no-store' });
@@ -171,6 +252,7 @@ $pageData = $pageData ?? include __DIR__ . '/../data/public-display-data.php';
             const container = document.querySelector('.slideshow-container');
             if (!container || !ads || !ads.length) return;
 
+            displayPlayback.reset();
             clearTimeout(publicAdTimer);
             if (window.ytCheckInterval) clearInterval(window.ytCheckInterval);
             
@@ -181,6 +263,8 @@ $pageData = $pageData ?? include __DIR__ . '/../data/public-display-data.php';
             
             if (publicAdIndex >= ads.length) publicAdIndex = 0;
             const ad = ads[publicAdIndex];
+            currentDisplayAd = ad;
+            currentDisplayStartedAt = Date.now();
             
             const isVideo = (ad.type || '').startsWith('video/');
             const isYoutube = ad.type === 'youtube';
@@ -220,12 +304,15 @@ $pageData = $pageData ?? include __DIR__ . '/../data/public-display-data.php';
                     window.ytCheckInterval = setInterval(() => {
                         if (window.YT && window.YT.Player) {
                             clearInterval(window.ytCheckInterval);
+                            let updatePlaybackState = () => {};
                             window.currentYtPlayer = new YT.Player('yt-player-display', {
                                 videoId,
                                 playerVars: { autoplay: 1, playsinline: 1, controls: 1, rel: 0, origin: window.location.origin },
                                 events: {
                                     'onReady': (event) => {
+                                        updatePlaybackState = displayPlayback.attachYouTube(event.target);
                                         event.target.playVideo();
+                                        catchUpDisplayPlayback();
                                         if (window.speechSynthesis && (window.speechSynthesis.pending || window.speechSynthesis.speaking)) {
                                             event.target.mute();
                                         }
@@ -235,6 +322,7 @@ $pageData = $pageData ?? include __DIR__ . '/../data/public-display-data.php';
                                         event.target.playVideo();
                                     },
                                     'onStateChange': (event) => {
+                                        updatePlaybackState(event.data);
                                         if (event.data === 0) { // YT.PlayerState.ENDED
                                             next();
                                         }
@@ -246,11 +334,16 @@ $pageData = $pageData ?? include __DIR__ . '/../data/public-display-data.php';
                 }
             } else if (isVideo) {
                 const video = container.querySelector('video');
-                if (video) video.onended = next;
+                if (video) {
+                    displayPlayback.attachVideo(video);
+                    video.onended = next;
+                    video.addEventListener('loadedmetadata', catchUpDisplayPlayback, { once: true });
+                }
 
             } else {
                 publicAdTimer = setTimeout(next, Math.max(3, ad.duration || 8) * 1000);
             }
+            reportDisplayPlayback();
         }
 
         async function refreshDisplayAds() {
@@ -271,6 +364,7 @@ $pageData = $pageData ?? include __DIR__ . '/../data/public-display-data.php';
 
                 const container = document.querySelector('.slideshow-container');
                 if (!activeAds.length) {
+                    displayPlayback.reset();
                     if (container) {
                         container.innerHTML = '<div class="empty-ad-placeholder" style="display:flex;align-items:center;justify-content:center;height:100%;color:#888;font-size:1.5rem;background:#f5f5f5;">No announcements</div>';
                     }
@@ -472,5 +566,14 @@ $pageData = $pageData ?? include __DIR__ . '/../data/public-display-data.php';
         refreshDisplayAds();
         setInterval(refreshDisplayFromReception, 2000);
         setInterval(refreshDisplayAds, 500);
+        setInterval(reportDisplayPlayback, 750);
+        setInterval(() => {
+            if (!document.hidden) catchUpDisplayPlayback();
+        }, 1000);
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) catchUpDisplayPlayback();
+        });
+        window.addEventListener('focus', catchUpDisplayPlayback);
+        window.addEventListener('pageshow', catchUpDisplayPlayback);
     });
 </script>

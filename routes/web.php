@@ -20,6 +20,8 @@ $router->post('/api/ads', [\App\Controllers\AdvertisementController::class, 'sto
 $router->post('/api/ads/delete', [\App\Controllers\AdvertisementController::class, 'destroy']);
 $router->post('/api/ads/command', [\App\Controllers\AdvertisementController::class, 'command']);
 $router->post('/api/ads/settings', [\App\Controllers\AdvertisementController::class, 'settings']);
+$router->get('/api/ads/playback', [\App\Controllers\AdvertisementController::class, 'getPlayback']);
+$router->post('/api/ads/playback', [\App\Controllers\AdvertisementController::class, 'playback']);
 $router->get('/login', [\App\Controllers\AuthController::class, 'showLogin']);
 $router->post('/login', [\App\Controllers\AuthController::class, 'processLogin']);
 $router->post('/logout', [\App\Controllers\AuthController::class, 'logout']);

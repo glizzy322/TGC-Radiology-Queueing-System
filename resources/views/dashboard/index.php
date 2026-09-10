@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reception | Radiology QMS</title>
-    <link rel="stylesheet" href="/css/receptionist.css?v=2">
+    <link rel="stylesheet" href="/css/receptionist.css?v=4">
+    <script src="/js/background-playback.js"></script>
+    <script src="/js/playback-sync.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
@@ -508,6 +510,9 @@
         let selectedAdDataUrl = '';
         let adsPreviewIndex = 0;
         let adsPreviewTimer = null;
+        const previewPlayback = createBackgroundPlayback();
+        let currentPreviewAdId = null;
+        let mirroringPublicDisplay = false;
 
         // ----------------------------------------------------
         // ADVERTISEMENTS LOGIC (API Integration)
@@ -750,7 +755,11 @@
                 views.forEach((view) => view.classList.remove('active'));
                 item.classList.add('active');
                 document.getElementById(`${item.dataset.view}View`).classList.add('active');
+                if (item.dataset.view === 'ads') {
+                    document.getElementById('adsView').classList.add('playback-started');
+                }
                 pageTitle.textContent = item.textContent.trim();
+                requestAnimationFrame(resumeReceptionPreview);
             });
         });
 
@@ -1497,9 +1506,10 @@
             if (adId != null) sendCommand('play_ad', adId);
         }
 
-        function renderAdsPreview() {
+        function renderAdsPreview(syncState = null) {
             const stage = document.getElementById('adsPreviewStage');
             if (!stage) return;
+            previewPlayback.reset();
             clearTimeout(adsPreviewTimer);
             if (window.ytPreviewCheckInterval) clearInterval(window.ytPreviewCheckInterval);
             if (window.currentYtPreviewPlayer && typeof window.currentYtPreviewPlayer.destroy === 'function') {
@@ -1516,8 +1526,12 @@
 
             if (adsPreviewIndex >= activeAds.length) adsPreviewIndex = 0;
             const ad = activeAds[adsPreviewIndex];
+            currentPreviewAdId = ad.id;
             const isVideo = (ad.type || '').startsWith('video/');
             const isYoutube = ad.type === 'youtube';
+            const syncedPosition = syncState
+                ? getSyncedPlaybackTime(syncState.data, syncState.server_time)
+                : 0;
 
             let mediaHtml = '';
             let videoId = '';
@@ -1542,6 +1556,7 @@
             `;
 
             const next = () => {
+                if (mirroringPublicDisplay) return;
                 adsPreviewIndex = (adsPreviewIndex + 1) % activeAds.length;
                 renderAdsPreview();
             };
@@ -1557,15 +1572,22 @@
                     window.ytPreviewCheckInterval = setInterval(() => {
                         if (window.YT && window.YT.Player) {
                             clearInterval(window.ytPreviewCheckInterval);
+                            let updatePlaybackState = () => {};
                             window.currentYtPreviewPlayer = new YT.Player('yt-preview-display', {
                                 videoId,
                                 playerVars: { autoplay: 1, playsinline: 1, controls: 1, rel: 0, origin: window.location.origin },
                                 events: {
+                                    'onReady': (event) => {
+                                        updatePlaybackState = previewPlayback.attachYouTube(event.target);
+                                        if (syncedPosition > 0) event.target.seekTo(syncedPosition, true);
+                                        event.target.playVideo();
+                                    },
                                     'onAutoplayBlocked': (event) => {
                                         event.target.mute();
                                         event.target.playVideo();
                                     },
                                     'onStateChange': (event) => {
+                                        updatePlaybackState(event.data);
                                         if (event.data === 0) {
                                             next();
                                         }
@@ -1577,12 +1599,88 @@
                 }
             } else if (isVideo) {
                 const video = stage.querySelector('video');
-                if (video) video.onended = next;
+                if (video) {
+                    previewPlayback.attachVideo(video);
+                    video.onended = next;
+                    if (syncState) {
+                        video.addEventListener('loadedmetadata', () => {
+                            const maximum = Number.isFinite(video.duration)
+                                ? Math.max(0, video.duration - 0.1)
+                                : syncedPosition;
+                            video.currentTime = Math.min(syncedPosition, maximum);
+                            video.play().catch(() => {});
+                        }, { once: true });
+                    }
+                }
 
             } else {
                 adsPreviewTimer = setTimeout(next, Math.max(3, ad.duration || 8) * 1000);
             }
             return ad.id;
+        }
+
+        function syncPreviewToPublicDisplay(result) {
+            const playback = result?.data;
+            if (!playback) return;
+            if ((Number(result.server_time) - Number(playback.updated_at)) > 15) {
+                mirroringPublicDisplay = false;
+                return;
+            }
+
+            const activeAds = getActivePreviewAds();
+            const targetIndex = activeAds.findIndex((ad) => ad.id == playback.ad_id);
+            if (targetIndex === -1) return;
+
+            mirroringPublicDisplay = true;
+            const targetTime = getSyncedPlaybackTime(playback, result.server_time);
+
+            if (currentPreviewAdId != playback.ad_id) {
+                adsPreviewIndex = targetIndex;
+                renderAdsPreview(result);
+                return;
+            }
+
+            const video = document.querySelector('#adsPreviewStage video');
+            if (video && Number.isFinite(video.duration)) {
+                if (shouldCorrectPlayback(video.currentTime, targetTime)) {
+                    video.currentTime = Math.min(targetTime, Math.max(0, video.duration - 0.1));
+                }
+                if (video.paused) video.play().catch(() => {});
+                return;
+            }
+
+            const youtube = window.currentYtPreviewPlayer;
+            if (playback.media_type === 'youtube' && youtube && typeof youtube.getCurrentTime === 'function') {
+                try {
+                    if (shouldCorrectPlayback(youtube.getCurrentTime(), targetTime)) {
+                        youtube.seekTo(targetTime, true);
+                    }
+                    const state = youtube.getPlayerState();
+                    if (state !== 1) youtube.playVideo();
+                } catch (error) {}
+            }
+        }
+
+        async function refreshPublicPlayback() {
+            try {
+                const response = await fetch('/api/ads/playback?_=' + Date.now(), { cache: 'no-store' });
+                const result = await response.json();
+                if (result.status === 'success') syncPreviewToPublicDisplay(result);
+            } catch (error) {
+                console.warn('Unable to synchronize the ad preview.', error);
+            }
+        }
+
+        function resumeReceptionPreview() {
+            const video = document.querySelector('#adsPreviewStage video');
+            if (video && video.paused && !video.ended) video.play().catch(() => {});
+
+            const youtube = window.currentYtPreviewPlayer;
+            if (youtube && typeof youtube.getPlayerState === 'function') {
+                try {
+                    if (youtube.getPlayerState() !== 1) youtube.playVideo();
+                } catch (error) {}
+            }
         }
 
         const startDateFilter = document.getElementById('startDateFilter');
@@ -1855,6 +1953,15 @@
         loadSavedState();
         render();
         loadAds();
+        setTimeout(refreshPublicPlayback, 250);
+        setInterval(refreshPublicPlayback, 750);
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                refreshPublicPlayback();
+                resumeReceptionPreview();
+            }
+        });
+        window.addEventListener('focus', resumeReceptionPreview);
 
         // Download Excel Summary Report
         function downloadExcelReport() {

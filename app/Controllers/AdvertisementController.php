@@ -4,6 +4,8 @@ use App\Repositories\AdvertisementRepository;
 
 class AdvertisementController
 {
+    private const PLAYBACK_FILE = __DIR__ . '/../../storage/ad_playback.json';
+
     private function requireAuth()
     {
         if (session_status() === PHP_SESSION_NONE) session_start();
@@ -102,6 +104,62 @@ class AdvertisementController
         file_put_contents($commandFile, json_encode($cmdData));
 
         echo json_encode(['status' => 'success']);
+    }
+
+    public function getPlayback()
+    {
+        header('Content-Type: application/json');
+        header('Cache-Control: no-store, no-cache, must-revalidate');
+
+        $playback = null;
+        if (file_exists(self::PLAYBACK_FILE)) {
+            $data = json_decode((string) file_get_contents(self::PLAYBACK_FILE), true);
+            if (is_array($data) && isset($data['ad_id'], $data['updated_at'])) {
+                $playback = $data;
+            }
+        }
+
+        echo json_encode([
+            'status' => 'success',
+            'data' => $playback,
+            'server_time' => microtime(true)
+        ]);
+    }
+
+    public function playback()
+    {
+        header('Content-Type: application/json');
+        header('Cache-Control: no-store, no-cache, must-revalidate');
+
+        $input = json_decode((string) file_get_contents('php://input'), true);
+        $adId = filter_var($input['ad_id'] ?? null, FILTER_VALIDATE_INT, [
+            'options' => ['min_range' => 1]
+        ]);
+        $position = filter_var($input['position'] ?? null, FILTER_VALIDATE_FLOAT);
+        $mediaType = $input['media_type'] ?? '';
+
+        if ($adId === false || $position === false || $position < 0 ||
+            !in_array($mediaType, ['image', 'video', 'youtube'], true)) {
+            http_response_code(400);
+            echo json_encode(['status' => 'error', 'message' => 'Invalid playback data']);
+            return;
+        }
+
+        $playback = [
+            'ad_id' => $adId,
+            'position' => round((float) $position, 3),
+            'playing' => filter_var($input['playing'] ?? false, FILTER_VALIDATE_BOOLEAN),
+            'media_type' => $mediaType,
+            'updated_at' => microtime(true)
+        ];
+
+        if (file_put_contents(self::PLAYBACK_FILE, json_encode($playback), LOCK_EX) === false) {
+            http_response_code(500);
+            echo json_encode(['status' => 'error', 'message' => 'Unable to save playback state']);
+            return;
+        }
+
+        echo json_encode(['status' => 'success', 'data' => $playback]);
     }
 
     public function store()

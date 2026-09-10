@@ -239,6 +239,20 @@ a {
     display: block;
 }
 
+/* Keep playback mounted without showing the preview over other app sections. */
+#adsView.playback-started:not(.active) {
+    display: block;
+    position: fixed;
+    left: -10000px;
+    top: 0;
+    width: 340px;
+    height: 240px;
+    padding: 0;
+    opacity: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+
 .panel {
     border: 1px solid var(--line);
     border-radius: 13px;
