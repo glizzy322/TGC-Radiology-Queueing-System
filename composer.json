@@ -1,6 +1,6 @@
 {
-    "name": "tgc/radiology-queueing-system",
-    "description": "TGC Radiology Department Queueing System",
+    "name": "tgmci/radiology-queueing-system",
+    "description": "TGMCI Radiology Department Queueing System",
     "type": "project",
     "require": {
         "php": ">=8.1",

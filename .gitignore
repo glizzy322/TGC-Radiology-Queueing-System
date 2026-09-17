@@ -20,3 +20,6 @@
 *.swo
 Thumbs.db
 .DS_Store
+
+# Documentation build and rendering intermediates
+/tmp/documentation/
