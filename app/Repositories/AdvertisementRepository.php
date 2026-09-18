@@ -24,10 +24,10 @@ class AdvertisementRepository
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function create(string $filepath, int $durationSeconds, bool $isActive, int $displayOrder = 0): array
+    public function create(string $filepath, int $durationSeconds, bool $isActive, int $displayOrder = 0, bool $isLive = false): array
     {
-        $stmt = $this->db->prepare("INSERT INTO advertisements (filepath, duration_seconds, is_active, display_order) VALUES (?, ?, ?, ?)");
-        $stmt->execute([$filepath, $durationSeconds, $isActive ? 1 : 0, $displayOrder]);
+        $stmt = $this->db->prepare("INSERT INTO advertisements (filepath, duration_seconds, is_active, display_order, is_live) VALUES (?, ?, ?, ?, ?)");
+        $stmt->execute([$filepath, $durationSeconds, $isActive ? 1 : 0, $displayOrder, $isLive ? 1 : 0]);
         $id = $this->db->lastInsertId();
         
         $get = $this->db->prepare("SELECT * FROM advertisements WHERE id = ?");

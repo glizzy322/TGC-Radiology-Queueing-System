@@ -128,6 +128,7 @@ $pageData = $pageData ?? include __DIR__ . '/../data/public-display-data.php';
         const displayPlayback = createBackgroundPlayback();
         let currentDisplayAd = null;
         let currentDisplayStartedAt = 0;
+        let currentYouTubeIsLive = false;
         let playbackReportInFlight = false;
         const procedures = {
             xray: { title: 'X-RAY', spokenName: 'X-Ray', codeClass: 'XR', maxServing: 2 },
@@ -190,7 +191,7 @@ $pageData = $pageData ?? include __DIR__ . '/../data/public-display-data.php';
             }
 
             // The display timeline keeps moving even if the browser throttles a hidden tab.
-            if (duration > 0 && position >= duration && window.forceNextAd) {
+            if (!currentYouTubeIsLive && duration > 0 && position >= duration && window.forceNextAd) {
                 window.forceNextAd();
                 return;
             }
@@ -205,7 +206,8 @@ $pageData = $pageData ?? include __DIR__ . '/../data/public-display-data.php';
                         ad_id: currentDisplayAd.id,
                         position,
                         playing: true,
-                        media_type: mediaType
+                        media_type: mediaType,
+                        is_live: mediaType === 'youtube' && currentYouTubeIsLive
                     })
                 });
             } catch (error) {
@@ -233,6 +235,10 @@ $pageData = $pageData ?? include __DIR__ . '/../data/public-display-data.php';
             const youtube = window.currentYtPlayer;
             if (currentDisplayAd.type === 'youtube' && youtube && typeof youtube.getCurrentTime === 'function') {
                 try {
+                    if (currentYouTubeIsLive) {
+                        seekYouTubeLiveEdge(youtube);
+                        return;
+                    }
                     const duration = Number(youtube.getDuration()) || 0;
                     if (duration > 0 && targetTime >= duration) {
                         if (window.forceNextAd) window.forceNextAd();
@@ -269,18 +275,20 @@ $pageData = $pageData ?? include __DIR__ . '/../data/public-display-data.php';
                 try { window.currentYtPlayer.destroy(); } catch(e) {}
             }
             window.currentYtPlayer = null;
+            currentYouTubeIsLive = false;
             
             if (publicAdIndex >= ads.length) publicAdIndex = 0;
             const ad = ads[publicAdIndex];
             currentDisplayAd = ad;
             currentDisplayStartedAt = Date.now();
+            currentYouTubeIsLive = Boolean(ad.isLive);
             
             const isVideo = (ad.type || '').startsWith('video/');
             const isYoutube = ad.type === 'youtube';
             let videoId = '';
 
             if (isYoutube) {
-                const match = ad.src.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&?]+)/);
+                const match = ad.src.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|live\/|v\/|watch\?v=|watch\?.+&v=))([^&?]+)/);
                 if (match) videoId = match[1];
 
                 if (videoId) {
@@ -314,6 +322,7 @@ $pageData = $pageData ?? include __DIR__ . '/../data/public-display-data.php';
                         if (window.YT && window.YT.Player) {
                             clearInterval(window.ytCheckInterval);
                             let updatePlaybackState = () => {};
+                            try {
                             window.currentYtPlayer = new YT.Player('yt-player-display', {
                                 videoId,
                                 playerVars: { autoplay: 1, playsinline: 1, controls: 1, rel: 0, origin: window.location.origin },
@@ -321,7 +330,15 @@ $pageData = $pageData ?? include __DIR__ . '/../data/public-display-data.php';
                                     'onReady': (event) => {
                                         updatePlaybackState = displayPlayback.attachYouTube(event.target);
                                         event.target.playVideo();
-                                        catchUpDisplayPlayback();
+                                        if (currentYouTubeIsLive) {
+                                            seekYouTubeLiveEdge(event.target);
+                                        } else {
+                                            detectYouTubeLivePlayback(event.target, (isLive) => {
+                                                currentYouTubeIsLive = isLive;
+                                                if (isLive) seekYouTubeLiveEdge(event.target);
+                                                else catchUpDisplayPlayback();
+                                            });
+                                        }
                                         if (window.speechSynthesis && (window.speechSynthesis.pending || window.speechSynthesis.speaking)) {
                                             event.target.mute();
                                         }
@@ -338,6 +355,9 @@ $pageData = $pageData ?? include __DIR__ . '/../data/public-display-data.php';
                                     }
                                 }
                             });
+                            } catch (error) {
+                                console.warn('Unable to initialize YouTube player.', error);
+                            }
                         }
                     }, 100);
                 }

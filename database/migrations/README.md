@@ -1,8 +1,8 @@
 # MySQL installation and upgrades
 
-Fresh installation: import `init_database.sql` once into an empty database, OR import numbered migrations `01` through `06` in order. Do not combine both installation paths: the seed files insert users.
+Fresh installation: import `init_database.sql` once into an empty database, OR import numbered migrations `01` through `07` in order. Do not combine both installation paths: the seed files insert users.
 
-Existing installation: back up the database, then import only `06_queue_integrity.sql`. It preserves tickets, counters, passwords, and media. Conditional DDL supports MySQL 8 and installations that already added `serving_slot` manually. It adds database room assignments for the five seeded room accounts. General radiology staff and administrators retain access to all rooms. Configure `staff_users.assigned_procedure` (`xray`, `ultrasound`, `ctscan`) and `assigned_slot` (zero-based) together for additional restricted accounts.
+Existing installation: back up the database, then import unapplied migrations in order. If `06_queue_integrity.sql` is already installed, import `07_youtube_live_ads.sql`. The migrations preserve tickets, counters, passwords, and media. Conditional DDL supports MySQL 8 and installations that already added columns manually. General radiology staff and administrators retain access to all rooms. Configure `staff_users.assigned_procedure` (`xray`, `ultrasound`, `ctscan`) and `assigned_slot` (zero-based) together for additional restricted accounts.
 
 The runtime and migration must be deployed together. New internal ticket codes include the date, while patient-facing screens and printed tickets show the short form (for example `XRAY-001`). Old codes are unchanged and still usable for completion. Slot occupancy follows the same current-day scope as the queue display.
 

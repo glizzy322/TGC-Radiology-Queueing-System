@@ -29,3 +29,24 @@ test('corrects material drift but ignores normal polling jitter', () => {
     assert.equal(window.shouldCorrectPlayback(20, 20.8), false);
     assert.equal(window.shouldCorrectPlayback(20, 21.3), true);
 });
+
+test('detects explicit and duration-growing YouTube live playback', () => {
+    assert.equal(window.isYouTubeLivePlayback({ isLive: true }, 500, 500), true);
+    assert.equal(window.isYouTubeLivePlayback({}, 500, 501.2), true);
+    assert.equal(window.isYouTubeLivePlayback({}, 500, 500), false);
+    assert.equal(window.isYouTubeLivePlayback({}, 22000, 22000, 21998), true);
+    assert.equal(window.isYouTubeLivePlayback({}, 22000, 22000, 2), false);
+    assert.equal(window.isYouTubeLivePlayback({}, 15, 15, 14), false);
+});
+
+test('seeks a YouTube live stream to its current live edge', () => {
+    let sought = null;
+    let played = false;
+    window.seekYouTubeLiveEdge({
+        getDuration: () => 7200,
+        seekTo: (position, ahead) => { sought = [position, ahead]; },
+        playVideo: () => { played = true; }
+    });
+    assert.deepEqual(sought, [7199, true]);
+    assert.equal(played, true);
+});

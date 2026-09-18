@@ -14,6 +14,7 @@ Tested at http://127.0.0.1:8000 using browser interactions, real HTTP requests, 
 | MP4, WebM | Browser-generated real videos uploaded successfully (HTTP 200), marked inactive. |
 | Invalid media | Unsupported PHP and source text disguised as JPG, MP4, or WebM rejected with HTTP 400. |
 | YouTube URL rules | Official HTTPS URL accepted. HTTP, lookalike host, and unrelated host rejected. Ads form visibly showed the rejection for an unrelated URL. This verifies URL acceptance, not playback availability of every YouTube video. |
+| YouTube live edge | Live ads carry an explicit live-stream setting. The active local stream reports `is_live: true`; live players seek to the current duration (one second behind the edge) and skip recorded-video position correction. |
 
 All temporary test advertisements and uploaded files were removed. The temporary browser video-check page was removed. No pre-existing tickets or advertisements were deleted.
 

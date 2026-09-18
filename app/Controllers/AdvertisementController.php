@@ -37,6 +37,7 @@ class AdvertisementController
                     'type' => $type,
                     'duration' => $ad['duration_seconds'],
                     'active' => (bool)$ad['is_active'],
+                    'isLive' => (bool)($ad['is_live'] ?? false),
                     'order' => $ad['display_order']
                 ];
             }, $ads);
@@ -156,6 +157,8 @@ class AdvertisementController
             'position' => round((float) $position, 3),
             'playing' => filter_var($input['playing'] ?? false, FILTER_VALIDATE_BOOLEAN),
             'media_type' => $mediaType,
+            'is_live' => $mediaType === 'youtube'
+                && filter_var($input['is_live'] ?? false, FILTER_VALIDATE_BOOLEAN),
             'updated_at' => microtime(true)
         ];
 
@@ -176,6 +179,7 @@ class AdvertisementController
         $youtubeUrl = $_POST['youtube_url'] ?? '';
         $publicUrl = '';
         $destPath = '';
+        $isLive = false;
 
         if (!empty($youtubeUrl)) {
             // Validate it's a basic URL
@@ -185,6 +189,7 @@ class AdvertisementController
                 return;
             }
             $publicUrl = $youtubeUrl;
+            $isLive = filter_var($_POST['youtube_live'] ?? false, FILTER_VALIDATE_BOOLEAN);
         } else {
             if (!isset($_FILES['media']) || $_FILES['media']['error'] !== UPLOAD_ERR_OK) {
                 http_response_code(400);
@@ -231,7 +236,7 @@ class AdvertisementController
         
         try {
             $repo = new AdvertisementRepository();
-            $ad = $repo->create($publicUrl, $duration, $isActive);
+            $ad = $repo->create($publicUrl, $duration, $isActive, 0, $isLive);
             echo json_encode(['status' => 'success', 'data' => $ad]);
         } catch (\Exception $e) {
             // cleanup if db fails and it's a file

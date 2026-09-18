@@ -18,6 +18,7 @@ try {
         : ['init_database.sql'];
     foreach ($files as $file) $db->exec(file_get_contents(dirname(__DIR__) . '/database/migrations/' . $file));
     $db->exec(file_get_contents(dirname(__DIR__) . '/database/migrations/06_queue_integrity.sql'));
+    $db->exec(file_get_contents(dirname(__DIR__) . '/database/migrations/07_youtube_live_ads.sql'));
     check(true, 'Clean schema and repeatable upgrade migration');
     $repo = new App\Repositories\TicketRepository();
     $queue = new App\Repositories\QueueRepository();

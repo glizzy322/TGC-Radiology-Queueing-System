@@ -64,6 +64,9 @@ try {
         if (isset($data['data']['id'])) $ads[] = $data['data']['id'];
         if ($status !== 200) echo substr($body, 0, 250) . PHP_EOL;
     }
+    [$status, , $data] = request($admin, '/api/ads', ['youtube_url' => 'https://www.youtube.com/watch?v=aqz-KE-bpKQ', 'youtube_live' => 'true', 'active' => 'false']);
+    result($status === 200 && ($data['data']['is_live'] ?? 0) == 1, 'YouTube live setting persisted');
+    if (isset($data['data']['id'])) $ads[] = $data['data']['id'];
     foreach (['fake.jpg', 'shell.php', 'fake.mp4', 'fake.webm'] as $name) {
         [$status] = request($admin, '/api/ads', ['media' => new CURLFile(__FILE__, 'application/octet-stream', $name), 'active' => 'false']);
         result($status === 400, "Reject disguised/unsupported $name");

@@ -291,6 +291,10 @@
                                         YouTube Link
                                     </label>
                                     <input type="text" id="youtubeUrlInput" placeholder="https://www.youtube.com/watch?v=..." style="width: 100%; padding: 10px 12px; border: 1px solid #d4d4d8; border-radius: 6px; font-size: 14px; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#087447';" onblur="this.style.borderColor='#d4d4d8';">
+                                    <label class="ads-check-control" style="margin-top: 10px;">
+                                        <input id="adYoutubeLiveInput" type="checkbox">
+                                        <span>This YouTube link is currently live</span>
+                                    </label>
                                 </div>
 
                                 <div class="upload-files-section" id="uploadFilesSection" hidden>
@@ -518,6 +522,7 @@
         const previewPlayback = createBackgroundPlayback();
         let currentPreviewAdId = null;
         let mirroringPublicDisplay = false;
+        let currentPreviewYouTubeIsLive = false;
 
         // ----------------------------------------------------
         // ADVERTISEMENTS LOGIC (API Integration)
@@ -1400,7 +1405,7 @@
                 let thumbHtml = '';
                 if (isYoutube) {
                     let videoId = '';
-                    const match = ad.src.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&?]+)/);
+                    const match = ad.src.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|live\/|v\/|watch\?v=|watch\?.+&v=))([^&?]+)/);
                     if (match) videoId = match[1];
                     thumbHtml = videoId ? `<img src="https://img.youtube.com/vi/${videoId}/default.jpg" alt="YouTube Thumbnail">` : `<div style="background:#000;width:100%;height:100%;"></div>`;
                 } else if (isVideo) {
@@ -1418,7 +1423,7 @@
                         </div>
                         <div class="ad-main">
                             <strong>${escapeHtml(ad.name)}</strong>
-                            <small>${isYoutube ? 'Auto - Plays until video ends (YouTube)' : ad.duration + 's on screen'}</small>
+                            <small>${isYoutube ? (ad.isLive ? 'YouTube live stream · starts at live edge' : 'Auto - Plays until video ends (YouTube)') : ad.duration + 's on screen'}</small>
                         </div>
                         <button class="ads-icon-btn btn-play-ad" type="button" onclick="playSelectedAd(${ad.id})" aria-label="Play this ad" title="Play this ad">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1445,6 +1450,7 @@
             const durationInput = document.getElementById('adDurationInput');
             const activeInput = document.getElementById('adActiveInput');
             const ytInput = document.getElementById('youtubeUrlInput');
+            const youtubeLiveInput = document.getElementById('adYoutubeLiveInput');
             
             selectedAdFile = null;
             selectedAdDataUrl = '';
@@ -1458,6 +1464,7 @@
                 if (durLabel) durLabel.textContent = 'Seconds on screen';
             }
             if (ytInput) ytInput.value = '';
+            if (youtubeLiveInput) youtubeLiveInput.checked = false;
             if (activeInput) activeInput.checked = true;
             if (form) form.hidden = true;
         }
@@ -1514,6 +1521,7 @@
                 try { window.currentYtPreviewPlayer.destroy(); } catch (e) {}
             }
             window.currentYtPreviewPlayer = null;
+            currentPreviewYouTubeIsLive = false;
 
             const activeAds = getActivePreviewAds();
 
@@ -1525,6 +1533,7 @@
             if (adsPreviewIndex >= activeAds.length) adsPreviewIndex = 0;
             const ad = activeAds[adsPreviewIndex];
             currentPreviewAdId = ad.id;
+            currentPreviewYouTubeIsLive = Boolean(ad.isLive);
             const isVideo = (ad.type || '').startsWith('video/');
             const isYoutube = ad.type === 'youtube';
             const syncedPosition = syncState
@@ -1534,7 +1543,7 @@
             let mediaHtml = '';
             let videoId = '';
             if (isYoutube) {
-                const match = ad.src.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&?]+)/);
+                const match = ad.src.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|live\/|v\/|watch\?v=|watch\?.+&v=))([^&?]+)/);
                 if (match) videoId = match[1];
                 if (videoId) {
                     mediaHtml = `<div id="yt-preview-display" class="ads-preview-media" style="width:100%;height:auto;aspect-ratio:16/9;max-height:100%;background:#000;"></div>`;
@@ -1577,8 +1586,17 @@
                                 events: {
                                     'onReady': (event) => {
                                         updatePlaybackState = previewPlayback.attachYouTube(event.target);
-                                        if (syncedPosition > 0) event.target.seekTo(syncedPosition, true);
-                                        event.target.playVideo();
+                                        if (ad.isLive || syncState?.data?.is_live) {
+                                            currentPreviewYouTubeIsLive = true;
+                                            seekYouTubeLiveEdge(event.target);
+                                        } else {
+                                            if (syncedPosition > 0) event.target.seekTo(syncedPosition, true);
+                                            event.target.playVideo();
+                                            detectYouTubeLivePlayback(event.target, (isLive) => {
+                                                currentPreviewYouTubeIsLive = isLive;
+                                                if (isLive) seekYouTubeLiveEdge(event.target);
+                                            });
+                                        }
                                     },
                                     'onAutoplayBlocked': (event) => {
                                         event.target.mute();
@@ -1650,6 +1668,11 @@
             const youtube = window.currentYtPreviewPlayer;
             if (playback.media_type === 'youtube' && youtube && typeof youtube.getCurrentTime === 'function') {
                 try {
+                    if (playback.is_live || currentPreviewYouTubeIsLive) {
+                        currentPreviewYouTubeIsLive = true;
+                        seekYouTubeLiveEdge(youtube);
+                        return;
+                    }
                     if (shouldCorrectPlayback(youtube.getCurrentTime(), targetTime)) {
                         youtube.seekTo(targetTime, true);
                     }
@@ -1846,6 +1869,8 @@
                 uploadFilesQueue = [];
                 renderUploadFiles();
                 fileInput.value = '';
+                const youtubeLiveInput = document.getElementById('adYoutubeLiveInput');
+                if (youtubeLiveInput) youtubeLiveInput.checked = false;
             }
 
             document.getElementById('cancelAdFormBtn').addEventListener('click', resetAdForm);
@@ -1874,6 +1899,7 @@
                 if (hasYoutube) {
                     const formData = new FormData();
                     formData.append('youtube_url', ytUrlInput.value.trim());
+                    formData.append('youtube_live', document.getElementById('adYoutubeLiveInput')?.checked ? 'true' : 'false');
                     formData.append('duration', duration);
                     formData.append('active', active);
 
