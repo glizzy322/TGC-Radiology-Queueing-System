@@ -9,6 +9,20 @@ window.shouldCorrectPlayback = function (currentTime, targetTime, tolerance = 1.
     return Math.abs((Number(currentTime) || 0) - (Number(targetTime) || 0)) > tolerance;
 };
 
+window.getYouTubeEmbedUrl = function (videoId, origin, referrer) {
+    const params = new URLSearchParams({
+        autoplay: '1',
+        mute: '1',
+        playsinline: '1',
+        controls: '1',
+        rel: '0',
+        enablejsapi: '1'
+    });
+    if (origin) params.set('origin', origin);
+    if (referrer) params.set('widget_referrer', referrer);
+    return `https://www.youtube.com/embed/${encodeURIComponent(videoId)}?${params.toString()}`;
+};
+
 window.isYouTubeLivePlayback = function (videoData, firstDuration, secondDuration, currentTime = 0) {
     if (videoData && (videoData.isLive === true || videoData.isLiveContent === true)) return true;
     const before = Number(firstDuration) || 0;

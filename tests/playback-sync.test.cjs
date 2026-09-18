@@ -7,8 +7,22 @@ const path = require('node:path');
 const window = {};
 vm.runInNewContext(
     fs.readFileSync(path.join(__dirname, '../public/js/playback-sync.js'), 'utf8'),
-    { window }
+    { window, URLSearchParams }
 );
+
+test('builds an identified, muted YouTube embed URL for reliable autoplay', () => {
+    const url = new URL(window.getYouTubeEmbedUrl(
+        'q1hjSEvN9-I',
+        'http://127.0.0.1:8000',
+        'http://127.0.0.1:8000/public-display'
+    ));
+    assert.equal(url.pathname, '/embed/q1hjSEvN9-I');
+    assert.equal(url.searchParams.get('autoplay'), '1');
+    assert.equal(url.searchParams.get('mute'), '1');
+    assert.equal(url.searchParams.get('enablejsapi'), '1');
+    assert.equal(url.searchParams.get('origin'), 'http://127.0.0.1:8000');
+    assert.equal(url.searchParams.get('widget_referrer'), 'http://127.0.0.1:8000/public-display');
+});
 
 test('advances a playing public-display position by server-observed age', () => {
     const state = { position: 18.25, playing: true, updated_at: 100 };

@@ -292,7 +292,12 @@ $pageData = $pageData ?? include __DIR__ . '/../data/public-display-data.php';
                 if (match) videoId = match[1];
 
                 if (videoId) {
-                    container.innerHTML = `<div id="yt-player-display" class="display-ad-media active" style="width:100%;height:auto;aspect-ratio:16/9;max-height:100%;background:#000;"></div>`;
+                    if (currentYouTubeIsLive) {
+                        const embedUrl = getYouTubeEmbedUrl(videoId, window.location.origin, window.location.href);
+                        container.innerHTML = `<iframe id="yt-player-display" class="display-ad-media active" src="${embedUrl}" title="YouTube live advertisement" style="width:100%;height:auto;aspect-ratio:16/9;max-height:100%;background:#000;border:0;" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>`;
+                    } else {
+                        container.innerHTML = `<div id="yt-player-display" class="display-ad-media active" style="width:100%;height:auto;aspect-ratio:16/9;max-height:100%;background:#000;"></div>`;
+                    }
                 } else {
                     container.innerHTML = `<div class="empty-ad-placeholder" style="display:flex;align-items:center;justify-content:center;height:100%;background:#000;color:#fff;">Invalid YouTube Link</div>`;
                 }
@@ -311,7 +316,7 @@ $pageData = $pageData ?? include __DIR__ . '/../data/public-display-data.php';
             window.forceNextAd = next;
 
             if (isYoutube) {
-                if (videoId) {
+                if (videoId && !currentYouTubeIsLive) {
                     if (!(window.YT && window.YT.Player) && !document.querySelector('script[src="https://www.youtube.com/iframe_api"]')) {
                         const tag = document.createElement('script');
                         tag.src = "https://www.youtube.com/iframe_api";
@@ -325,7 +330,7 @@ $pageData = $pageData ?? include __DIR__ . '/../data/public-display-data.php';
                             try {
                             window.currentYtPlayer = new YT.Player('yt-player-display', {
                                 videoId,
-                                playerVars: { autoplay: 1, playsinline: 1, controls: 1, rel: 0, origin: window.location.origin },
+                                playerVars: { autoplay: 1, mute: 1, playsinline: 1, controls: 1, rel: 0, origin: window.location.origin, widget_referrer: window.location.href },
                                 events: {
                                     'onReady': (event) => {
                                         updatePlaybackState = displayPlayback.attachYouTube(event.target);

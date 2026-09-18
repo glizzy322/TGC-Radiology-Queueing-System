@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>Reception | Radiology QMS</title>
     <link rel="stylesheet" href="/css/receptionist.css?v=4">
     <script src="/js/background-playback.js"></script>
@@ -1546,7 +1547,12 @@
                 const match = ad.src.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|live\/|v\/|watch\?v=|watch\?.+&v=))([^&?]+)/);
                 if (match) videoId = match[1];
                 if (videoId) {
-                    mediaHtml = `<div id="yt-preview-display" class="ads-preview-media" style="width:100%;height:auto;aspect-ratio:16/9;max-height:100%;background:#000;"></div>`;
+                    if (currentPreviewYouTubeIsLive) {
+                        const embedUrl = getYouTubeEmbedUrl(videoId, window.location.origin, window.location.href);
+                        mediaHtml = `<iframe id="yt-preview-display" class="ads-preview-media" src="${embedUrl}" title="YouTube live advertisement preview" style="width:100%;height:auto;aspect-ratio:16/9;max-height:100%;background:#000;border:0;" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>`;
+                    } else {
+                        mediaHtml = `<div id="yt-preview-display" class="ads-preview-media" style="width:100%;height:auto;aspect-ratio:16/9;max-height:100%;background:#000;"></div>`;
+                    }
                 } else {
                     mediaHtml = `<div style="background:#000;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#fff;">Invalid YouTube Link</div>`;
                 }
@@ -1569,7 +1575,7 @@
             };
 
             if (isYoutube) {
-                if (videoId) {
+                if (videoId && !currentPreviewYouTubeIsLive) {
                     if (!(window.YT && window.YT.Player) && !document.querySelector('script[src="https://www.youtube.com/iframe_api"]')) {
                         const tag = document.createElement('script');
                         tag.src = "https://www.youtube.com/iframe_api";
@@ -1582,7 +1588,7 @@
                             let updatePlaybackState = () => {};
                             window.currentYtPreviewPlayer = new YT.Player('yt-preview-display', {
                                 videoId,
-                                playerVars: { autoplay: 1, playsinline: 1, controls: 1, rel: 0, origin: window.location.origin },
+                                playerVars: { autoplay: 1, mute: 1, playsinline: 1, controls: 1, rel: 0, origin: window.location.origin, widget_referrer: window.location.href },
                                 events: {
                                     'onReady': (event) => {
                                         updatePlaybackState = previewPlayback.attachYouTube(event.target);
