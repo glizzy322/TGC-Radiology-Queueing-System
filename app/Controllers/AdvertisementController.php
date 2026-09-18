@@ -9,7 +9,7 @@ class AdvertisementController
     private function requireAuth()
     {
         if (session_status() === PHP_SESSION_NONE) session_start();
-        if (!isset($_SESSION['user_role'])) {
+        if (empty($_SESSION['user_id']) || !in_array($_SESSION['user_role'] ?? '', ['administrator', 'receptionist', 'radiology_staff'], true)) {
             http_response_code(403);
             header('Content-Type: application/json');
             echo json_encode(['error' => 'Unauthorized']);
@@ -128,6 +128,12 @@ class AdvertisementController
 
     public function playback()
     {
+        $this->requireAuth();
+        if (empty($_SESSION['playback_token']) || !hash_equals($_SESSION['playback_token'], $_SERVER['HTTP_X_PLAYBACK_TOKEN'] ?? '')) {
+            http_response_code(403);
+            echo json_encode(['error' => 'Unauthorized display writer']);
+            return;
+        }
         header('Content-Type: application/json');
         header('Cache-Control: no-store, no-cache, must-revalidate');
 
@@ -173,7 +179,7 @@ class AdvertisementController
 
         if (!empty($youtubeUrl)) {
             // Validate it's a basic URL
-            if (filter_var($youtubeUrl, FILTER_VALIDATE_URL) === false) {
+            if (!\App\Services\MediaValidation::youtubeUrl($youtubeUrl)) {
                 http_response_code(400);
                 echo json_encode(['error' => 'Invalid YouTube URL']);
                 return;
@@ -195,6 +201,13 @@ class AdvertisementController
                 return;
             }
             
+            try {
+                $ext = \App\Services\MediaValidation::extension($file['tmp_name'], $file['name']);
+            } catch (\InvalidArgumentException $e) {
+                http_response_code(400);
+                echo json_encode(['error' => $e->getMessage()]);
+                return;
+            }
             // Make sure upload dir exists
             $uploadDir = __DIR__ . '/../../public/storage/uploads/ads/';
             if (!is_dir($uploadDir)) {
@@ -202,8 +215,7 @@ class AdvertisementController
             }
 
             // Generate unique name
-            $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
-            $filename = uniqid('ad_') . '.' . $ext;
+            $filename = 'ad_' . bin2hex(random_bytes(16)) . '.' . $ext;
             $destPath = $uploadDir . $filename;
             $publicUrl = '/storage/uploads/ads/' . $filename;
 

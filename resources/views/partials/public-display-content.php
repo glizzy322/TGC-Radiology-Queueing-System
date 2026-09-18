@@ -1,4 +1,8 @@
 <?php
+$canPublishPlayback = !empty($_SESSION['user_id']);
+if ($canPublishPlayback && empty($_SESSION['playback_token'])) {
+    $_SESSION['playback_token'] = bin2hex(random_bytes(32));
+}
 $pageData = $pageData ?? include __DIR__ . '/../data/public-display-data.php';
 ?>
 <div class="main-container">
@@ -109,6 +113,11 @@ $pageData = $pageData ?? include __DIR__ . '/../data/public-display-data.php';
     </div>
 </div>
 <script>
+        function displayTicketId(ticket) {
+            const id = String(ticket?.displayId || ticket?.id || '');
+            return id.replace(/^(.+)-\d{8}-(\d+)$/, '$1-$2');
+        }
+
     document.addEventListener('DOMContentLoaded', function() {
         const storageKey = 'radiologyQueueState';
         const adsDbName = 'radiologyAdsDb';
@@ -161,7 +170,7 @@ $pageData = $pageData ?? include __DIR__ . '/../data/public-display-data.php';
         let lastCommandTimestamp = 0;
 
         async function reportDisplayPlayback() {
-            if (!currentDisplayAd || playbackReportInFlight) return;
+            if (!<?= json_encode($canPublishPlayback) ?> || !currentDisplayAd || playbackReportInFlight) return;
 
             const position = Math.max(0, (Date.now() - currentDisplayStartedAt) / 1000);
             const mediaType = currentDisplayAd.type === 'youtube'
@@ -190,7 +199,7 @@ $pageData = $pageData ?? include __DIR__ . '/../data/public-display-data.php';
             try {
                 await fetch('/api/ads/playback', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', 'X-Playback-Token': <?= json_encode($_SESSION['playback_token'] ?? '') ?> },
                     cache: 'no-store',
                     body: JSON.stringify({
                         ad_id: currentDisplayAd.id,
@@ -405,7 +414,7 @@ $pageData = $pageData ?? include __DIR__ . '/../data/public-display-data.php';
                 const items = Array.isArray(queues[key]) ? queues[key].slice(0, 4) : [];
                 const rows = Array.from({ length: 4 }, (_, index) => `
                     <div class="incoming-box-row">
-                        <span class="incoming-code">${items[index]?.id || ''}</span>
+                        <span class="incoming-code">${displayTicketId(items[index])}</span>
                     </div>
                 `).join('');
 
@@ -421,7 +430,7 @@ $pageData = $pageData ?? include __DIR__ . '/../data/public-display-data.php';
         }
 
         function getTicketNumberValue(ticket) {
-            const match = String(ticket?.id || '').match(/\d+/);
+            const match = displayTicketId(ticket).match(/\d+$/);
             return match ? Number(match[0]) : Number.MAX_SAFE_INTEGER;
         }
 
@@ -453,7 +462,7 @@ $pageData = $pageData ?? include __DIR__ . '/../data/public-display-data.php';
                 const rows = patientItems
                     .map((item) => `
                         <div class="serving-col-row">
-                            <span class="serving-code proc-${item.procedure.codeClass}">${item.ticket.id}</span>
+                            <span class="serving-code proc-${item.procedure.codeClass}">${displayTicketId(item.ticket)}</span>
                         </div>
                     `).join('');
 
@@ -487,7 +496,7 @@ $pageData = $pageData ?? include __DIR__ . '/../data/public-display-data.php';
                 if (media.tagName === 'VIDEO') media.muted = true;
             });
 
-            const message = `Queue number ${getSpokenTicketId(ticket.id)}, please proceed to ${spokenLabel}.`;
+            const message = `Queue number ${getSpokenTicketId(displayTicketId(ticket))}, please proceed to ${spokenLabel}.`;
             window.speechSynthesis.cancel();
             
             const utterance1 = new SpeechSynthesisUtterance(message);

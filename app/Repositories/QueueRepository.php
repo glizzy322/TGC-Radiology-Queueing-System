@@ -40,6 +40,7 @@ class QueueRepository
             
             $formatted = [
                 'id' => $t['ticket_code'],
+                'displayId' => preg_replace('/^(.+)-\d{8}-(\d+)$/', '$1-$2', $t['ticket_code']),
                 'procedureKey' => $key,
                 'patientType' => $t['patient_type'],
                 'status' => $t['status'],
@@ -63,12 +64,20 @@ class QueueRepository
 
     public function callNext(string $procedureKey, int $staffId, int $slotIndex = 0): ?array
     {
+        \App\Services\QueueAccess::check($this->db, $staffId, $procedureKey, $slotIndex);
         $this->db->beginTransaction();
         try {
             // Find procedure id based on key
             $prefix = $procedureKey === 'xray' ? 'XR' : ($procedureKey === 'ultrasound' ? 'UT' : 'CT');
             $today = date('Y-m-d');
             
+            // A procedure row serializes callers even when the requested slot is empty.
+            $lock = $this->db->prepare('SELECT id FROM procedures WHERE code LIKE ? ORDER BY id FOR UPDATE');
+            $lock->execute(["$prefix%"]);
+            $lock->fetchAll();
+            $occupied = $this->db->prepare("SELECT t.id FROM queue_tickets t JOIN procedures p ON p.id = t.procedure_id WHERE p.code LIKE ? AND t.status = 'serving' AND COALESCE(t.serving_slot, 0) = ? AND DATE(t.created_at) = ? FOR UPDATE");
+            $occupied->execute(["$prefix%", $slotIndex, $today]);
+            if ($occupied->fetch()) throw new \DomainException('Serving slot is occupied', 409);
             // Find oldest waiting ticket with highest priority
             $stmt = $this->db->prepare("
                 SELECT t.id, t.ticket_code 
@@ -107,7 +116,7 @@ class QueueRepository
     {
         $this->db->beginTransaction();
         try {
-            $stmt = $this->db->prepare("SELECT id FROM queue_tickets WHERE ticket_code = ? AND status = 'serving' FOR UPDATE");
+            $stmt = $this->db->prepare("SELECT id, procedure_id, serving_slot FROM queue_tickets WHERE ticket_code = ? AND status = 'serving' FOR UPDATE");
             $stmt->execute([$ticketCode]);
             $ticket = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -116,6 +125,11 @@ class QueueRepository
                 return false;
             }
 
+            $procedure = $this->db->prepare('SELECT code FROM procedures WHERE id = ?');
+            $procedure->execute([$ticket['procedure_id']]);
+            $code = $procedure->fetchColumn();
+            $key = str_starts_with($code, 'XR') ? 'xray' : (str_starts_with($code, 'CT') ? 'ctscan' : 'ultrasound');
+            \App\Services\QueueAccess::check($this->db, $staffId, $key, (int)($ticket['serving_slot'] ?? 0));
             $update = $this->db->prepare("UPDATE queue_tickets SET status = 'completed', completed_time = CURRENT_TIMESTAMP WHERE id = ?");
             $update->execute([$ticket['id']]);
 

@@ -22,6 +22,16 @@ class TicketRepository
         try {
             $today = date('Y-m-d');
             
+            $issuer = $this->db->prepare("SELECT id FROM staff_users WHERE id = ? AND role IN ('receptionist', 'administrator')");
+            $issuer->execute([$issuerId]);
+            if (!$issuer->fetch()) throw new \DomainException('Unauthorized issuer', 403);
+            $procedure = $this->db->prepare('SELECT code FROM procedures WHERE id = ?');
+            $procedure->execute([$procedureId]);
+            $procedurePrefix = $procedure->fetchColumn();
+            if (!$procedurePrefix) throw new \InvalidArgumentException('Invalid procedure', 400);
+            // Upsert creates and locks the counter even on the first request of the day.
+            $ensure = $this->db->prepare('INSERT INTO queue_counters (date, procedure_id, last_sequence_number) VALUES (?, ?, 0) ON DUPLICATE KEY UPDATE id = id');
+            $ensure->execute([$today, $procedureId]);
             // Lock the counter row
             $stmt = $this->db->prepare("SELECT last_sequence_number FROM queue_counters WHERE date = ? AND procedure_id = ? FOR UPDATE");
             $stmt->execute([$today, $procedureId]);
@@ -37,7 +47,7 @@ class TicketRepository
                 $insert->execute([$today, $procedureId, $nextSeq]);
             }
 
-            $ticketCode = sprintf("%s-%03d", $procedurePrefix, $nextSeq);
+            $ticketCode = sprintf("%s-%s-%03d", $procedurePrefix, str_replace('-', '', $today), $nextSeq);
 
             // Insert Ticket
             $insertTicket = $this->db->prepare("INSERT INTO queue_tickets (ticket_code, procedure_id, category_id, issuer_id) VALUES (?, ?, ?, ?)");
@@ -62,7 +72,7 @@ class TicketRepository
             return $getTicket->fetch();
 
         } catch (Exception $e) {
-            $this->db->rollBack();
+            if ($this->db->inTransaction()) $this->db->rollBack();
             throw $e;
         }
     }

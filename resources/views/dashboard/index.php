@@ -471,6 +471,11 @@
         }
 
         const currentUserName = <?= json_encode($userName ?? '') ?>;
+
+        function displayTicketId(ticket) {
+            const id = String(ticket?.displayId || ticket?.id || '');
+            return id.replace(/^(.+)-\d{8}-(\d+)$/, '$1-$2');
+        }
         const currentRole = <?= json_encode($userRole ?? '') ?>;
         const procedures = {
             xray: { name: 'X-Ray', shortName: 'X-RAY', chartLabel: 'X-Ray', prefix: 'XR', maxServing: 2 },
@@ -808,6 +813,7 @@
                     const ticketData = result.ticket;
                     const t = {
                         id: ticketData.ticket_code,
+                        displayId: String(ticketData.ticket_code).replace(/^(.+)-\d{8}-(\d+)$/, '$1-$2'),
                         procedureKey: ticketData.procedure_code.toLowerCase(),
                         procedure: ticketData.procedure_name,
                         patientType: ticketData.category_code,
@@ -817,7 +823,7 @@
                     
                     state.latestTicket = t;
                     
-                    formNote.textContent = `${t.id} added to ${t.procedure}.`;
+                    formNote.textContent = `${displayTicketId(t)} added to ${t.procedure}.`;
                     fetchQueueState();
                     printTicket(t);
                 } else {
@@ -844,7 +850,7 @@
             printWindow.document.write(`<!DOCTYPE html>
 <html>
 <head>
-<title>Queue Ticket - ${ticket.id}</title>
+<title>Queue Ticket - ${displayTicketId(ticket)}</title>
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -927,7 +933,7 @@
     <div class="dept-name">Radiology Department</div>
     <hr class="divider">
     <div class="label">Queue Number</div>
-    <div class="ticket-number">${ticket.id}</div>
+    <div class="ticket-number">${displayTicketId(ticket)}</div>
     <div class="procedure-name">${ticket.procedure}</div>
     <div class="patient-type">${ticket.patientType === 'IPD' ? 'In-Patient (IPD)' : 'Out-Patient (OPD)'}</div>
     <hr class="divider">
@@ -1001,7 +1007,7 @@
         function renderTicket(ticket, compact = false) {
             return `
                 <div class="${compact ? 'queue-pill' : 'ticket-row'}">
-                    <strong>${ticket.id}</strong>
+                    <strong>${displayTicketId(ticket)}</strong>
                     <span>${ticket.patientType}</span>
                 </div>
             `;
@@ -1029,7 +1035,7 @@
             latestTicket.innerHTML = `
                 <div class="ticket-fade">
                     <span class="ticket-procedure">${state.latestTicket.procedure.toUpperCase()}</span>
-                    <strong>${state.latestTicket.id}</strong>
+                    <strong>${displayTicketId(state.latestTicket)}</strong>
                     <small>${state.latestTicket.patientType}</small>
                     <p>Now waiting · hand this number<br>to the patient</p>
                 </div>
@@ -1040,15 +1046,7 @@
             const manageGrid = document.getElementById('manageGrid');
             if (!manageGrid) return;
 
-            // Map room-specific accounts to their allowed procedure key and slot
-            const roomMap = {
-                'X-Ray 1': { key: 'xray', slot: 0 },
-                'X-Ray 2': { key: 'xray', slot: 1 },
-                'Ultrasound 1': { key: 'ultrasound', slot: 0 },
-                'Ultrasound 2': { key: 'ultrasound', slot: 1 },
-                'CT Scan': { key: 'ctscan', slot: 0 }
-            };
-            const myRoom = roomMap[currentUserName] || null;
+            const myRoom = <?= json_encode($assignedRoom ?? null) ?>;
 
             if (myRoom) {
                 manageGrid.style.display = 'flex';
@@ -1090,7 +1088,7 @@
                                 <div class="rqs-serving-hero proc-${key}">
                                     ${ticket ? `
                                         <div class="label">Now serving</div>
-                                        <div class="num rqs-num">${ticket.id}</div>
+                                        <div class="num rqs-num">${displayTicketId(ticket)}</div>
                                         <span class="category-badge">${ticket.patientType}</span>
                                     ` : `
                                         <div class="none">No patient being served</div>
@@ -1134,7 +1132,7 @@
                                     ${waiting.map((ticket, index) => `
                                         <div class="rqs-waiting-row">
                                             <span class="pos">${index + 1}</span>
-                                            <span class="num rqs-num">${ticket.id}</span>
+                                            <span class="num rqs-num">${displayTicketId(ticket)}</span>
                                             <span class="category-badge">${ticket.patientType}</span>
                                         </div>
                                     `).join('')}
@@ -1375,7 +1373,7 @@
             simple.innerHTML = Object.entries(procedures).map(([key, procedure]) => {
                 const servingList = state.serving[key].filter(Boolean);
                 const ids = servingList.length > 0
-                    ? servingList.map(t => t.id).join(', ')
+                    ? servingList.map(displayTicketId).join(', ')
                     : '-';
                 return `
                     <li class="monitor-simple-row">

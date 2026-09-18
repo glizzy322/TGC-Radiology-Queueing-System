@@ -12,7 +12,7 @@ class QueueController
             $state = $repo->getTodayState();
             echo json_encode(['status' => 'success', 'data' => $state]);
         } catch (\Exception $e) {
-            http_response_code(500);
+            http_response_code(in_array($e->getCode(), [400, 403, 409], true) ? $e->getCode() : 500);
             echo json_encode(['error' => $e->getMessage()]);
         }
     }
@@ -40,7 +40,7 @@ class QueueController
         $procedureKey = $input['procedure_key'] ?? '';
         $slotIndex = $input['slot_index'] ?? 0;
 
-        if (!$procedureKey) {
+        if (!is_string($procedureKey) || !in_array($procedureKey, ['xray', 'ultrasound', 'ctscan'], true) || !is_int($slotIndex)) {
             http_response_code(400);
             echo json_encode(['error' => 'Missing procedure_key']);
             return;
@@ -55,7 +55,7 @@ class QueueController
                 echo json_encode(['status' => 'error', 'message' => 'No waiting tickets for this procedure']);
             }
         } catch (\Exception $e) {
-            http_response_code(500);
+            http_response_code(in_array($e->getCode(), [400, 403, 409], true) ? $e->getCode() : 500);
             echo json_encode(['error' => $e->getMessage()]);
         }
     }
@@ -83,7 +83,7 @@ class QueueController
                 echo json_encode(['status' => 'error', 'message' => 'Ticket not found or not serving']);
             }
         } catch (\Exception $e) {
-            http_response_code(500);
+            http_response_code(in_array($e->getCode(), [400, 403, 409], true) ? $e->getCode() : 500);
             echo json_encode(['error' => $e->getMessage()]);
         }
     }

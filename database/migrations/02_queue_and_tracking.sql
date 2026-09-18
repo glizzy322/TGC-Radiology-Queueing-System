@@ -13,6 +13,7 @@ CREATE TABLE queue_tickets (
     procedure_id INT NOT NULL,
     category_id INT NOT NULL,
     status ENUM('waiting', 'serving', 'completed', 'skipped', 'cancelled') NOT NULL DEFAULT 'waiting',
+    serving_slot INT NULL,
     issue_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     serving_time TIMESTAMP NULL,
     completed_time TIMESTAMP NULL,

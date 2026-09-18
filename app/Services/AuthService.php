@@ -21,6 +21,8 @@ class AuthService
             if (session_status() === PHP_SESSION_NONE) {
                 session_start();
             }
+            session_regenerate_id(true);
+            unset($_SESSION['playback_token']);
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['user_name'] = $user['name'];
             $_SESSION['user_role'] = $user['role'];

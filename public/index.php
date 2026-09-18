@@ -2,6 +2,21 @@
 
 declare(strict_types=1);
 
+// Let PHP's built-in development server serve existing CSS, JavaScript,
+// images, and uploaded media instead of sending them through the app router.
+if (PHP_SAPI === 'cli-server') {
+    $requestPath = rawurldecode((string) parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH));
+    $publicFile = __DIR__ . str_replace('/', DIRECTORY_SEPARATOR, $requestPath);
+    if ($requestPath !== '/' && is_file($publicFile)) {
+        return false;
+    }
+}
+
+$sessionPath = dirname(__DIR__) . '/storage/sessions';
+if (!is_dir($sessionPath)) {
+    mkdir($sessionPath, 0775, true);
+}
+session_save_path($sessionPath);
 session_start();
 
 require dirname(__DIR__) . '/bootstrap/app.php';

@@ -20,6 +20,13 @@ final class DashboardController
         $userRole = $_SESSION['user_role'] ?? 'unknown';
         $userName = $_SESSION['user_name'] ?? 'Unknown User';
 
+        $assignment = \App\Core\Database::getConnection()->prepare('SELECT assigned_procedure, assigned_slot FROM staff_users WHERE id = ?');
+        $assignment->execute([$_SESSION['user_id']]);
+        $assigned = $assignment->fetch(\PDO::FETCH_ASSOC);
+        $assignedRoom = $userRole !== 'administrator' && !empty($assigned['assigned_procedure'])
+            ? ['key' => $assigned['assigned_procedure'], 'slot' => (int)$assigned['assigned_slot']]
+            : null;
+
         $procedureService = new ProcedureService();
         $categoryRepo = new CategoryRepository();
 

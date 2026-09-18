@@ -13,7 +13,7 @@ class TicketController
         }
 
         $role = $_SESSION['user_role'] ?? '';
-        if ($role !== 'receptionist' && $role !== 'administrator') {
+        if (empty($_SESSION['user_id']) || ($role !== 'receptionist' && $role !== 'administrator')) {
             http_response_code(403);
             header('Content-Type: application/json');
             echo json_encode(['error' => 'Unauthorized']);
@@ -35,7 +35,8 @@ class TicketController
             $ticket = $service->createTicket(
                 (int) $input['procedure_id'],
                 $input['procedure_prefix'],
-                (int) $input['category_id']
+                (int) $input['category_id'],
+                (int) $_SESSION['user_id']
             );
             echo json_encode(['status' => 'success', 'ticket' => $ticket]);
         } catch (\Exception $e) {

@@ -7,6 +7,8 @@
 # Storage (keep structure, ignore contents)
 /storage/logs/*
 !/storage/logs/.gitkeep
+/storage/sessions/*
+!/storage/sessions/.gitkeep
 /storage/uploads/*
 !/storage/uploads/.gitkeep
 /storage/ad_playback.json

@@ -104,6 +104,11 @@
     </div>
 </div>
 <script>
+        function displayTicketId(ticket) {
+            const id = String(ticket?.displayId || ticket?.id || '');
+            return id.replace(/^(.+)-\d{8}-(\d+)$/, '$1-$2');
+        }
+
     document.addEventListener('DOMContentLoaded', function() {
         const storageKey = 'radiologyQueueState';
         const adsDbName = 'radiologyAdsDb';
@@ -202,7 +207,7 @@
                 const items = Array.isArray(queues[key]) ? queues[key].slice(0, 4) : [];
                 const rows = Array.from({ length: 4 }, (_, index) => `
                     <div class="incoming-box-row">
-                        <span class="incoming-code">${items[index]?.id || ''}</span>
+                        <span class="incoming-code">${displayTicketId(items[index])}</span>
                     </div>
                 `).join('');
 
@@ -218,7 +223,7 @@
         }
 
         function getTicketNumberValue(ticket) {
-            const match = String(ticket?.id || '').match(/\d+/);
+            const match = displayTicketId(ticket).match(/\d+$/);
             return match ? Number(match[0]) : Number.MAX_SAFE_INTEGER;
         }
 
@@ -247,7 +252,7 @@
                     .filter((item) => item.ticket.patientType === patientType)
                     .map((item) => `
                         <div class="serving-col-row">
-                            <span class="serving-code proc-${item.procedure.codeClass}">${item.ticket.id}</span>
+                            <span class="serving-code proc-${item.procedure.codeClass}">${displayTicketId(item.ticket)}</span>
                         </div>
                     `).join('');
 
@@ -266,7 +271,7 @@
         function speakAnnouncement(ticket, procedure, spokenLabel = procedure.spokenName) {
             if (!audioEnabled || !('speechSynthesis' in window)) return;
 
-            const message = `Queue number ${getSpokenTicketId(ticket.id)}, please proceed to ${spokenLabel}.`;
+            const message = `Queue number ${getSpokenTicketId(displayTicketId(ticket))}, please proceed to ${spokenLabel}.`;
             window.speechSynthesis.cancel();
             const utterance = new SpeechSynthesisUtterance(message);
             utterance.rate = 0.9;
